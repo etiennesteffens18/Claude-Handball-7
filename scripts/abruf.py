@@ -672,6 +672,7 @@ def main() -> int:
         lang_zu_id = {z["team"]: z["teamId"] for z in daten["tabelle"]}
         meta["meineTeams"] = [lang_zu_id.get(t, t) for t in liga.get("meine_teams", [])]
         meta["aktualisiert"] = jetzt
+        meta["abrufFehler"] = not daten["spiele"]
         meta["tabelleQuelle"] = tabelle_quelle
         (AUSGABE / f"{liga['slug']}.json").write_text(
             json.dumps({"meta": meta, **daten}, ensure_ascii=False, separators=(",", ":")),

@@ -201,6 +201,8 @@ function seiteUebersicht(){
   for (const l of S.ligen) for (const id of l.meta.meineTeams){
     const z=l.tabelle.find(t=>String(t.teamId)===String(id));
     const le=letztesSpiel(l,id), na=naechstesSpiel(l,id);
+    if(l.meta.abrufFehler){ karten.push(`<div class="tkarte"><div class="tk-kopf"><div><b>${esc(l.meta.kurz)}</b><div class="liga-name">${esc(l.meta.name)}</div></div></div>
+      <div class="tk-zeile"><span class="tk-text leise" style="white-space:normal">${l.meta.quelle==="h4a"?"Handball4All":"handball.net"} liefert gerade keine Daten. Der nächste automatische Abruf versucht es erneut.</span></div></div>`); continue; }
     karten.push(`<button class="tkarte" data-oeffne="${esc(l.meta.slug)}|${esc(id)}">
       <div class="tk-kopf"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.kurz)}</div></div>
         ${z?`<div class="platz">${z.platz}.<small>Platz</small></div>`:""}</div>
