@@ -95,7 +95,7 @@ a{color:var(--akzent)}
 .tkarte:active{transform:scale(.99)}
 .tk-kopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
 .tk-kopf b{font-size:17px}
-.tk-zeile{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--linie);font-size:14px;min-height:38px}
+.tk-zeile{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px solid var(--linie);font-size:14px;min-height:38px}
 .tk-lab{width:62px;flex:none;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--leise);font-weight:700}
 .tk-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tk-dat{color:var(--leise);font-size:12px;white-space:nowrap}
@@ -138,6 +138,13 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 #tip.an{opacity:1}
 .quote{display:inline-block;width:46px;height:6px;background:var(--linie);border-radius:3px;vertical-align:middle;margin-left:6px;overflow:hidden}
 .quote b{display:block;height:100%;background:var(--s-team)}
+.tk-naechst{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tk-naechst .tk-text{white-space:normal}
+.tk-art{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--leise)}
+.tk-art.heim{color:var(--akzent)}
+.sprung{position:sticky;top:var(--kopfhoehe,62px);z-index:4;background:var(--bg);margin:0 -14px;padding:10px 14px 8px}
+[id^="st-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
+.reiter button{line-height:1.15}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -196,6 +203,10 @@ function gegner(sp,id){ const heim=String(sp.heimId)===String(id); return (heim?
 function letztesSpiel(l,id){ return teamSpiele(l,id).filter(s=>s.status==="beendet"&&s.hTore!=null).slice(-1)[0]; }
 function naechstesSpiel(l,id){ const heute=new Date(); heute.setHours(0,0,0,0);
   return teamSpiele(l,id).find(s=>s.status==="live")||teamSpiele(l,id).find(s=>s.status==="geplant"&&datum(s.datum)>=heute); }
+function naechstesText(sp,id){
+  const heim=String(sp.heimId)===String(id), wann=sp.status==="live"?"LIVE":`${kurzDatum(sp.datum)}${uhr(sp.datum)!=="offen"?`, ${uhr(sp.datum)} Uhr`:""}`;
+  return `<span class="tk-naechst"><span class="tk-art${heim?" heim":""}">${heim?"Heimspiel":"Auswärtsspiel"}</span> <span class="tk-zeit${sp.status==="live"?" live":""}">${wann}</span><span class="tk-text">${heim?"gegen":"in"} ${esc(heim?sp.gast:sp.heim)}</span></span>`;
+}
 function ergebnisAusSicht(sp,id){ const heim=String(sp.heimId)===String(id); return heim?`${sp.hTore}:${sp.gTore}`:`${sp.gTore}:${sp.hTore}`; }
 
 // Startseite: je Team eine Karte mit Platz, letztem und nächstem Spiel
@@ -211,7 +222,7 @@ function seiteUebersicht(){
       <div class="tk-kopf"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.kurz)}${l.meta.manuell?` · Stand ${new Date(l.meta.aktualisiert).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</div></div>
         ${z?`<div class="platz">${z.platz}.<small>Platz</small></div>`:""}</div>
       <div class="tk-zeile"><span class="tk-lab">Letztes</span>${le?`<span class="erg-mini ${ausgang(le,id)}">${ergebnisAusSicht(le,id)}</span><span class="tk-text">${esc(gegner(le,id))}</span><span class="tk-dat">${kurzDatum(le.datum)}</span>`:`<span class="tk-text leise">noch keins</span>`}</div>
-      <div class="tk-zeile"><span class="tk-lab">Nächstes</span>${na?`<span class="tk-zeit${na.status==="live"?" live":""}">${na.status==="live"?"LIVE":`${kurzDatum(na.datum)} ${uhr(na.datum)}`}</span><span class="tk-text">${esc(gegner(na,id))}</span>`:`<span class="tk-text leise">${l.meta.teildaten?"kommt mit dem ersten Abruf":"keins angesetzt"}</span>`}</div>
+      <div class="tk-zeile"><span class="tk-lab">Nächstes</span>${na?naechstesText(na,id):`<span class="tk-text leise">${l.meta.teildaten?"kommt mit dem ersten Abruf":"keins angesetzt"}</span>`}</div>
     </button>`);
   }
   return karten.length?`<h2>Meine Teams</h2>`+karten.join("")+`<div class="hinweis" style="text-align:center">Team antippen für alle Spiele, Tabelle und Statistik</div>`
@@ -248,7 +259,7 @@ function seiteTeam(){
     <div class="team-titel"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.name)}${l.meta.manuell?` · Stand ${new Date(l.meta.aktualisiert).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</div>
       <div style="margin-top:6px">${formHtml(form(l,id))}</div></div>
       ${z?`<div class="platz">${z.platz}.<small>${pkt(z)} Pkt · ${z.sp} Sp</small></div>`:""}</div>
-    <div class="reiter">${[["spiele","Spiele"],["gegner","Gegner"],["tabelle","Tabelle"],["statistik","Statistik"]].map(([k,n])=>`<button data-tab="${k}" aria-pressed="${S.tab===k}">${n}</button>`).join("")}</div>
+    <div class="reiter">${[["spiele","Spiele"],["tabelle","Tabelle"],["statistik","Statistik"],["gegner","Nächster Gegner"]].map(([k,n])=>`<button data-tab="${k}" aria-pressed="${S.tab===k}">${n}</button>`).join("")}</div>
     ${inhalt}`;
 }
 
@@ -279,13 +290,13 @@ function seiteStatistik(){
   const fertig=l.spiele.filter(s=>s.status==="beendet"&&s.hTore!=null);
   const toreGesamt=fertig.reduce((a,s)=>a+s.hTore+s.gTore,0);
   const heimSiege=fertig.filter(s=>s.hTore>s.gTore).length;
-  let html=`${l.meta.berichteNur?`<div class="hinweis" style="background:var(--akzent-weich);padding:10px 12px;border-radius:10px;margin:12px 0 0">Spielberichte ausgewertet: nur die Spiele von ${esc(l.meta.berichteNur.map(id=>teamName(l,id)).join(', '))}. Werte anderer Teams und der Liga-Schnitt beruhen deshalb nur auf diesen Partien.</div>`:""}<h2>Liga auf einen Blick</h2><div class="karte kz">
+  let html=`${l.meta.berichteNur?`<div class="hinweis" style="background:var(--akzent-weich);padding:10px 12px;border-radius:10px;margin:12px 0 0">Spielberichte ausgewertet: nur die Spiele von ${esc(l.meta.berichteNur.map(id=>teamName(l,id)).join(', '))}. Werte anderer Teams und der Liga-Schnitt beruhen deshalb nur auf diesen Partien.</div>`:""}<h2 id="st-liga" data-nav="Liga">Liga auf einen Blick</h2><div class="karte kz">
     <div><b>${fertig.length}</b><span>Spiele</span></div>
     <div><b>${fertig.length?f1(toreGesamt/fertig.length):"–"}</b><span>Tore/Spiel</span></div>
     <div><b>${fertig.length?Math.round(100*heimSiege/fertig.length)+"%":"–"}</b><span>Heimsiege</span></div></div>`;
 
   const ts=l.torschuetzen.filter(p=>p.tore>0).slice(0,25);
-  html+=`<h2>Torschützen</h2>`;
+  html+=`<h2 id="st-tors" data-nav="Torschützen">Torschützen</h2>`;
   if (ts.length){
     const max=ts[0].tore;
     html+=`<div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Spieler</th><th>Sp</th><th>Tore</th><th>Ø</th><th>7m</th><th>2'</th></tr></thead><tbody>`+
@@ -296,7 +307,7 @@ function seiteStatistik(){
 
   html+=abschnittSieben(l);
   const teams=l.tabelle.map(t=>({t,w:teamWerte(l,t.teamId),st:l.teamStrafen.find(x=>String(x.teamId)===String(t.teamId))}));
-  html+=`<h2>Teamwerte</h2><div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Team</th><th>Tore Ø</th><th>Gegen Ø</th><th>Heim</th><th>Ausw.</th><th>2' Ø</th></tr></thead><tbody>`+
+  html+=`<h2 id="st-team" data-nav="Teamwerte">Teamwerte</h2><div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Team</th><th>Tore Ø</th><th>Gegen Ø</th><th>Heim</th><th>Ausw.</th><th>2' Ø</th></tr></thead><tbody>`+
     teams.map(({t,w,st})=>`<tr class="klick${meinTeam(l,t.teamId)?" mein":""}" data-team="${esc(l.meta.slug)}|${esc(t.teamId)}"><td>${t.platz}</td><td>${esc(teamName(l,t.teamId))}</td>
       <td>${w.sp?f1(w.tore/w.sp):"–"}</td><td>${w.sp?f1(w.gegen/w.sp):"–"}</td>
       <td>${w.heim.join("-")}</td><td>${w.ausw.join("-")}</td><td>${st&&st.spiele?f1(st.zwei/st.spiele):"–"}</td></tr>`).join("")+`</tbody></table></div>
@@ -305,10 +316,11 @@ function seiteStatistik(){
   if (fertig.length){
     const hoch=[...fertig].sort((a,b)=>Math.abs(b.hTore-b.gTore)-Math.abs(a.hTore-a.gTore))[0];
     const viel=[...fertig].sort((a,b)=>(b.hTore+b.gTore)-(a.hTore+a.gTore))[0];
-    html+=`<h2>Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`;
+    html+=`<h2 id="st-rek" data-nav="Rekorde">Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`;
   }
   html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l)+abschnittZahl(l);
-  return html;
+  const nav=[...html.matchAll(/<h2 id="(st-[a-z]+)" data-nav="([^"]+)"/g)].map(m=>`<button class="chip" data-springe="${m[1]}">${m[2]}</button>`).join("");
+  return `<div class="chips sprung">${nav}</div>`+html;
 }
 
 function teamBlatt(slug,id){
@@ -363,7 +375,7 @@ function abschnittSieben(l){
     const liste=teams.map(x=>({...x,q:x.t/x.w})).sort((a,b)=>b.q-a.q||b.w-a.w);
     tab=`<table><thead><tr><th></th><th>Team</th><th>Tore/Würfe</th><th>Quote</th></tr></thead><tbody>${liste.map(x=>`<tr class="${meinTeam(l,x.teamId)?"mein":""}"><td></td><td>${esc(teamName(l,x.teamId))}</td><td>${x.t}/${x.w}</td><td>${pz(x.q)}<span class="quote"><b style="width:${100*x.q}%"></b></span></td></tr>`).join("")}</tbody></table>`;
   }
-  return `<h2>7-Meter</h2><div class="karte kz"><div><b>${W}</b><span>7m-Würfe</span></div><div><b>${pz(W?T/W:null)}</b><span>verwandelt (Liga)</span></div><div><b>${f1(W/Math.max(1,l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null).length))}</b><span>7m je Spiel</span></div></div>
+  return `<h2 id="st-sieben" data-nav="7-Meter">7-Meter</h2><div class="karte kz"><div><b>${W}</b><span>7m-Würfe</span></div><div><b>${pz(W?T/W:null)}</b><span>verwandelt (Liga)</span></div><div><b>${f1(W/Math.max(1,l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null).length))}</b><span>7m je Spiel</span></div></div>
     <div class="chips"><button class="chip" data-sieben="werfer" aria-pressed="${art==="werfer"}">Je Werfer</button><button class="chip" data-sieben="teams" aria-pressed="${art==="teams"}">Je Team</button></div>
     <div class="karte tabelle-wrap">${tab}</div><div class="hinweis">Aus den Spielberichten. Werfer sortiert nach verwandelten 7m.</div>`;
 }
@@ -378,7 +390,7 @@ function abschnittZahl(l){
   const sum=z.reduce((a,x)=>({spiele:a.spiele+x.spiele,ueSek:a.ueSek+x.ueSek,ueTore:a.ueTore+x.ueTore,ueGegen:a.ueGegen+x.ueGegen,uzSek:a.uzSek+x.uzSek,uzTore:a.uzTore+x.uzTore,uzGegen:a.uzGegen+x.uzGegen}),{spiele:0,ueSek:0,ueTore:0,ueGegen:0,uzSek:0,uzTore:0,uzGegen:0});
   const L=zahlWerte(sum,art);
   const teams=z.map(x=>({x,name:teamName(l,x.teamId),w:zahlWerte(x,art)})).sort((a,b)=>(b.w.d??-99)-(a.w.d??-99));
-  return `<h2>Über- &amp; Unterzahl</h2>
+  return `<h2 id="st-zahl" data-nav="Über-/Unterzahl">Über- &amp; Unterzahl</h2>
     <div class="chips"><button class="chip" data-zahl="ue" aria-pressed="${art==="ue"}">Überzahl</button><button class="chip" data-zahl="uz" aria-pressed="${art==="uz"}">Unterzahl</button></div>
     <div class="karte kz"><div><b>${f1(L.min)}</b><span>Min. je Spiel und Team</span></div><div><b>${L.t}:${L.g}</b><span>Tore : Gegentore (Liga)</span></div><div><b>${plus(L.d)}</b><span>Tordiff. je 2 Min.</span></div></div>
     <div class="karte tabelle-wrap"><table><thead><tr><th></th><th>Team</th><th>Min Ø</th><th>Tore</th><th>+/- je 2'</th></tr></thead><tbody>
@@ -439,7 +451,7 @@ function seiteGegner(l,id){
   const duelle=l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null&&((String(x.heimId)===String(id)&&String(x.gastId)===String(gid))||(String(x.heimId)===String(gid)&&String(x.gastId)===String(id))));
   const letzte=teamSpiele(l,gid).filter(x=>x.status==="beendet"&&x.hTore!=null).slice(-5).reverse();
   return `<h2>Nächstes Spiel</h2><div class="karte">${spielZeile(l,na,id)}</div>
-    ${hin.length?`<h2>Auffällig bei ${esc(gname)}</h2><div class="karte"><ul class="scout">${hin.map(h=>`<li>${h}</li>`).join("")}</ul></div>`:""}
+    ${hin.length?`<h2>Auffälligkeiten bei ${esc(gname)}</h2><div class="karte"><ul class="scout">${hin.map(h=>`<li>${h}</li>`).join("")}</ul></div>`:""}
     <h2>Vergleich</h2><div class="karte tabelle-wrap"><table class="vgl"><thead><tr><th></th><th>Wir</th><th>Gegner</th></tr></thead><tbody>
       ${zeilen.map(([n,f])=>`<tr><td>${esc(n)}</td><td>${f(A,true)}</td><td>${f(B,false)}</td></tr>`).join("")}</tbody></table></div>
     <h2>Gefährlichste Werfer</h2>${werfer.length?`<div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Spieler</th><th>Sp</th><th>Tore</th><th>Ø</th><th>7m</th><th>2'</th></tr></thead><tbody>
@@ -496,14 +508,14 @@ function abschnittSchnitt(l){
   const zeilen=daten.map(d=>({name:d.name,mein:d.mein,wert:(art==="gegen"?d.w.gegen:d.w.tore)/d.w.sp}))
     .sort((a,b)=>art==="gegen"?a.wert-b.wert:b.wert-a.wert);
   const schnitt=daten.reduce((a,d)=>a+d.w.tore,0)/daten.reduce((a,d)=>a+d.w.sp,0);
-  return `<h2>Tore &amp; Gegentore pro Spiel</h2><div class="chips"><button class="chip" data-schnitt="gegen" aria-pressed="${art==="gegen"}">Gegentore Ø</button><button class="chip" data-schnitt="tore" aria-pressed="${art==="tore"}">Tore Ø</button></div>
+  return `<h2 id="st-schnitt" data-nav="Tore Ø">Tore &amp; Gegentore pro Spiel</h2><div class="chips"><button class="chip" data-schnitt="gegen" aria-pressed="${art==="gegen"}">Gegentore Ø</button><button class="chip" data-schnitt="tore" aria-pressed="${art==="tore"}">Tore Ø</button></div>
     <div class="karte">${liegendeBalken(zeilen,schnitt,art==="gegen"?"Gegentore/Spiel":"Tore/Spiel")}</div>
     ${art==="gegen"?`<div class="hinweis">Sortiert nach bester Abwehr (wenigste Gegentore oben).</div>`:""}`;
 }
 
 function abschnittVerlauf(l){
   const v=l.verlauf;
-  if(!v||!v.teams.length) return `<h2>Wann fallen die Tore?</h2><div class="karte leer">Erscheint, sobald Spielberichte mit Spielminuten vorliegen.</div>`;
+  if(!v||!v.teams.length) return `<h2 id="st-phasen" data-nav="Torphasen">Wann fallen die Tore?</h2><div class="karte leer">Erscheint, sobald Spielberichte mit Spielminuten vorliegen.</div>`;
   const teams=v.teams.filter(t=>t.spiele).map(t=>({...t,name:teamName(l,t.teamId)})).sort((a,b)=>a.name.localeCompare(b.name));
   const wahl=teams.find(t=>String(t.teamId)===String(S.verlaufTeam?.[l.meta.slug]))||teams.find(t=>S.team&&String(t.teamId)===String(S.team.id))||teams.find(t=>meinTeam(l,t.teamId))||teams[0];
   const pro=a=>a.map(x=>x/wahl.spiele);
@@ -515,7 +527,7 @@ function abschnittVerlauf(l){
   const zeilen=teams.map(t=>{const a=phase(t.tore,t.spiele),b=phase(t.gegen,t.spiele);
     return `<tr class="klick${meinTeam(l,t.teamId)?" mein":""}" data-verlauf="${esc(l.meta.slug)}|${esc(t.teamId)}"><td></td><td>${esc(t.name)}</td>
       <td>${esc(v.labels[a.i])} <span class="liga-name">${a.d>=0?"+":""}${f1(a.d)}</span></td><td>${esc(v.labels[b.i])} <span class="liga-name">${b.d>=0?"+":""}${f1(b.d)}</span></td></tr>`;}).join("");
-  return `<h2>Wann fallen die Tore?</h2>
+  return `<h2 id="st-phasen" data-nav="Torphasen">Wann fallen die Tore?</h2>
     <select data-verlaufwahl="${esc(l.meta.slug)}">${teams.map(t=>`<option value="${esc(t.teamId)}"${t===wahl?" selected":""}>${esc(t.name)}</option>`).join("")}</select>
     <div class="karte"><div class="diag-titel">Geworfene Tore pro Spiel</div>${legende(sTore,linie)}${saeulen(v.labels,sTore,linie)}</div>
     <div class="karte"><div class="diag-titel">Gegentore pro Spiel</div>${legende(sGegen,linie)}${saeulen(v.labels,sGegen,linie)}</div>
@@ -532,7 +544,7 @@ function abschnittAuszeit(l){
   const zeile=(name,n,e,g,t,gg,kl="",attr="")=>{const q=quote(e,g);
     return `<tr class="${kl}"${attr}><td></td><td>${esc(name)}</td><td>${n}</td><td>${q==null?"–":Math.round(100*q)+"%"}${q==null?"":`<span class="quote"><b style="width:${100*q}%"></b></span>`}</td><td>${n?(t-gg>0?"+":"")+f1((t-gg)/n):"–"}</td></tr>`;};
   const teams=v.auszeiten.map(x=>({...x,name:teamName(l,x.teamId),q:quote(x.naechstesEigen,x.naechstesGegner)??-1})).sort((a,b)=>b.q-a.q||b.anzahl-a.anzahl);
-  return `<h2>Torerfolg nach Auszeit</h2>
+  return `<h2 id="st-ausz" data-nav="Auszeit">Torerfolg nach Auszeit</h2>
     <div class="karte kz"><div><b>${sum.anzahl}</b><span>Auszeiten</span></div><div><b>${ligaQ==null?"–":Math.round(100*ligaQ)+"%"}</b><span>nächstes Tor eigenes</span></div>
       <div><b>${sum.anzahl?((sum.t-sum.gg)>0?"+":"")+f1((sum.t-sum.gg)/sum.anzahl):"–"}</b><span>Tordiff. 3 Min. danach</span></div></div>
     <div class="karte tabelle-wrap"><table><thead><tr><th></th><th>Team</th><th>Ausz.</th><th>Nächstes Tor</th><th>+/- 3'</th></tr></thead><tbody>
@@ -553,7 +565,7 @@ addEventListener("scroll",versteckeTip,{passive:true});
 document.addEventListener("change",e=>{ const s=e.target.closest("[data-verlaufwahl]"); if(s){ S.verlaufTeam={...(S.verlaufTeam||{}),[s.dataset.verlaufwahl]:s.value}; zeichne(); } });
 
 // ------------------------------------------------------------- Ablauf
-function zeichne(){ $("#app").innerHTML=S.team?seiteTeam():seiteUebersicht(); }
+function zeichne(){ document.documentElement.style.setProperty("--kopfhoehe",document.querySelector("header").offsetHeight+"px"); $("#app").innerHTML=S.team?seiteTeam():seiteUebersicht(); }
 function oeffneTeam(slug,id){ S.team={slug,id}; S.tab="spiele"; S.umfang="team"; zeichne(); scrollTo(0,0);
   try{ history.pushState({team:true},""); }catch(e){} }
 function schliesseTeam(){ S.team=null; zeichne(); scrollTo(0,0); }
@@ -563,6 +575,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-zurueck]")){ try{ if(history.state&&history.state.team){ history.back(); return; } }catch(_){} schliesseTeam(); return; }
   const tb=e.target.closest("[data-tab]"); if(tb){S.tab=tb.dataset.tab;zeichne();return;}
   const um=e.target.closest("[data-umfang]"); if(um){S.umfang=um.dataset.umfang;zeichne();return;}
+  const sp=e.target.closest("[data-springe]"); if(sp){document.getElementById(sp.dataset.springe)?.scrollIntoView({behavior:"smooth",block:"start"});return;}
   const za=e.target.closest("[data-zahl]"); if(za){S.zahlArt=za.dataset.zahl;zeichne();return;}
   const si=e.target.closest("[data-sieben]"); if(si){S.siebenArt=si.dataset.sieben;zeichne();return;}
   const sa=e.target.closest("[data-schnitt]"); if(sa){S.schnittArt=sa.dataset.schnitt;zeichne();return;}

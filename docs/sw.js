@@ -1,5 +1,5 @@
 // Offline-Fähigkeit: App-Hülle zwischenspeichern, Daten immer zuerst frisch holen.
-const C = "handball7-v2";
+const C = "handball7-v3";
 self.addEventListener("install", e => e.waitUntil(caches.open(C).then(c => c.addAll(["./", "index.html", "icon.svg", "manifest.webmanifest"]))));
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x))))));
 self.addEventListener("fetch", e => {

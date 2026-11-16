@@ -42,7 +42,7 @@
     {
       "slug": "ma-rl-bw",
       "name": "Männliche A-Jugend Regionalliga BW",
-      "kurz": "U19 II · RL BW",
+      "kurz": "U18 · RL BW",
       "quelle": "h4a",
       "org_id": 216,
       "class_id": 161276,
@@ -55,7 +55,7 @@
     {
       "slug": "mb-rl-bw",
       "name": "Männliche B-Jugend Regionalliga BW",
-      "kurz": "U17 II · RL BW",
+      "kurz": "U16 · RL BW",
       "quelle": "h4a",
       "org_id": 216,
       "class_id": 161291,
