@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hallenbuch – Handball</title>
+<title>Handball 7</title>
 <meta name="theme-color" content="#0f1b2d">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -138,11 +138,13 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 #tip.an{opacity:1}
 .quote{display:inline-block;width:46px;height:6px;background:var(--linie);border-radius:3px;vertical-align:middle;margin-left:6px;overflow:hidden}
 .quote b{display:block;height:100%;background:var(--s-team)}
+ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
+table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
 </head>
 <body>
 <header>
-  <h1><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="#e8590c" stroke-width="2.2"/><path d="M4 9c4 1 12 1 16 0M4 15c4-1 12-1 16 0M12 2c-3 4-3 16 0 20" fill="none" stroke="#e8590c" stroke-width="1.6"/></svg><span style="color:inherit">Hallen<span>buch</span></span></h1>
+  <h1><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="#e8590c" stroke-width="2.2"/><path d="M4 9c4 1 12 1 16 0M4 15c4-1 12-1 16 0M12 2c-3 4-3 16 0 20" fill="none" stroke="#e8590c" stroke-width="1.6"/></svg><span style="color:inherit">Handball <span>7</span></span></h1>
   <div class="stand" id="stand">lädt …</div>
 </header>
 <main id="app"></main>
@@ -162,6 +164,7 @@ function tagText(iso){ const d=datum(iso), heute=new Date(); heute.setHours(0,0,
   const basis=`${WT[d.getDay()]}, ${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.`;
   return diff===0?"Heute · "+basis:diff===1?"Morgen · "+basis:diff===-1?"Gestern · "+basis:basis; }
 function uhr(iso){ const t=iso.split("T")[1]; return t && t!=="00:00" ? t : "offen"; }
+const pkt = t => `${t.punkte}:${t.minus ?? (2*t.n+t.u)}`;
 const meinTeam = (liga,id) => liga.meta.meineTeams.some(m => String(m)===String(id));
 
 function ausgang(sp, teamId){
@@ -238,13 +241,14 @@ function seiteTeam(){
     inhalt=`<div class="umschalter"><button data-umfang="team" aria-pressed="${S.umfang!=="liga"}">${esc(teamName(l,id))}</button><button data-umfang="liga" aria-pressed="${S.umfang==="liga"}">Ganze Liga</button></div>
       <h2>Nächste Spiele</h2>${spielListe(l,kommend,id,S.umfang==="liga")}
       <h2>Ergebnisse</h2>${spielListe(l,vorbei,id,S.umfang==="liga")}`;
-  } else if(S.tab==="tabelle") inhalt=seiteTabelle();
+  } else if(S.tab==="gegner") inhalt=seiteGegner(l,id);
+  else if(S.tab==="tabelle") inhalt=seiteTabelle();
   else inhalt=seiteStatistik();
   return `<button class="zurueck" data-zurueck>‹ Alle Teams</button>
     <div class="team-titel"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.name)}${l.meta.manuell?` · Stand ${new Date(l.meta.aktualisiert).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</div>
       <div style="margin-top:6px">${formHtml(form(l,id))}</div></div>
-      ${z?`<div class="platz">${z.platz}.<small>${z.punkte} Pkt · ${z.sp} Sp</small></div>`:""}</div>
-    <div class="reiter">${[["spiele","Spiele"],["tabelle","Tabelle"],["statistik","Statistik"]].map(([k,n])=>`<button data-tab="${k}" aria-pressed="${S.tab===k}">${n}</button>`).join("")}</div>
+      ${z?`<div class="platz">${z.platz}.<small>${pkt(z)} Pkt · ${z.sp} Sp</small></div>`:""}</div>
+    <div class="reiter">${[["spiele","Spiele"],["gegner","Gegner"],["tabelle","Tabelle"],["statistik","Statistik"]].map(([k,n])=>`<button data-tab="${k}" aria-pressed="${S.tab===k}">${n}</button>`).join("")}</div>
     ${inhalt}`;
 }
 
@@ -254,7 +258,7 @@ function seiteTabelle(){
   const l=aktuelleLiga(); if(!l) return "";
   const zeilen=l.tabelle.map(t=>`<tr class="klick${meinTeam(l,t.teamId)?" mein":""}" data-team="${esc(l.meta.slug)}|${esc(t.teamId)}">
     <td>${t.platz}</td><td>${esc(teamName(l,t.teamId))}</td><td>${t.sp}</td><td>${t.s}-${t.u}-${t.n}</td>
-    <td>${t.tore}:${t.gegentore}</td><td>${t.diff>0?"+":""}${t.diff}</td><td class="pkt">${t.punkte}</td></tr>`).join("");
+    <td>${t.tore}:${t.gegentore}</td><td>${t.diff>0?"+":""}${t.diff}</td><td class="pkt">${pkt(t)}</td></tr>`).join("");
   return `<div class="karte tabelle-wrap" style="margin-top:12px"><table><thead><tr><th>#</th><th>Team</th><th>Sp</th><th>S-U-N</th><th>Tore</th><th>+/-</th><th>Pkt</th></tr></thead>
     <tbody>${zeilen||`<tr><td colspan="7" class="leer">Noch keine Tabelle.</td></tr>`}</tbody></table></div>
     ${l.meta.tabelleQuelle==="berechnet"?`<div class="hinweis">Tabelle aus den vorliegenden Ergebnissen berechnet – die Quelle hat keine geliefert. Bei Wertungsentscheidungen kann der offizielle Stand abweichen.</div>`:""}
@@ -290,6 +294,7 @@ function seiteStatistik(){
         <td>${p.siebenWuerfe?`${p.siebenTore}/${p.siebenWuerfe}`:"–"}</td><td>${p.zwei||"–"}</td></tr>`).join("")+`</tbody></table></div>`;
   } else html+=`<div class="karte leer">${l.meta.quelle==="h4a"?"Erscheint, sobald Spielberichte (PDF) ausgelesen wurden.":"Erscheint, sobald Spielberichte abgerufen wurden."}</div>`;
 
+  html+=abschnittSieben(l);
   const teams=l.tabelle.map(t=>({t,w:teamWerte(l,t.teamId),st:l.teamStrafen.find(x=>String(x.teamId)===String(t.teamId))}));
   html+=`<h2>Teamwerte</h2><div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Team</th><th>Tore Ø</th><th>Gegen Ø</th><th>Heim</th><th>Ausw.</th><th>2' Ø</th></tr></thead><tbody>`+
     teams.map(({t,w,st})=>`<tr class="klick${meinTeam(l,t.teamId)?" mein":""}" data-team="${esc(l.meta.slug)}|${esc(t.teamId)}"><td>${t.platz}</td><td>${esc(teamName(l,t.teamId))}</td>
@@ -302,7 +307,7 @@ function seiteStatistik(){
     const viel=[...fertig].sort((a,b)=>(b.hTore+b.gTore)-(a.hTore+a.gTore))[0];
     html+=`<h2>Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`;
   }
-  html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l);
+  html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l)+abschnittZahl(l);
   return html;
 }
 
@@ -313,7 +318,7 @@ function teamBlatt(slug,id){
   const sp=teamSpiele(l,id);
   $("#blatt-innen").innerHTML=`<button class="zu" onclick="blatt.close()" aria-label="Schließen">×</button>
     <h2 style="margin-top:4px">${esc(l.meta.kurz)}</h2><div class="karte"><div class="team-kopf"><b>${esc(teamName(l,id))}</b>
-    ${zeile?`<div class="platz">${zeile.platz}.<small>${zeile.punkte} Pkt</small></div>`:""}</div>
+    ${zeile?`<div class="platz">${zeile.platz}.<small>${pkt(zeile)} Pkt</small></div>`:""}</div>
     <div style="margin:8px 0">${formHtml(form(l,id,10))}</div>
     <div class="kz"><div><b>${w.sp?f1(w.tore/w.sp):"–"}</b><span>Tore Ø</span></div><div><b>${w.sp?f1(w.gegen/w.sp):"–"}</b><span>Gegentore Ø</span></div>
     <div><b>${w.sp?((w.tore-w.gegen)>0?"+":"")+(w.tore-w.gegen):"–"}</b><span>Differenz</span></div></div>
@@ -331,11 +336,118 @@ function spielBlatt(slug,id){
     <h2 style="margin-top:4px">${esc(l.meta.kurz)}${s.runde?" · "+s.runde+". Spieltag":""}</h2>
     <div class="karte">${spielZeile(l,s)}</div>
     ${zh&&zg?`<h2>Vor dem Spiel</h2><div class="karte"><div class="zwei">
-      <div data-team="${esc(slug)}|${esc(s.heimId)}" style="cursor:pointer"><div class="mini">${esc(s.heim)}</div><b>${zh.platz}. Platz · ${zh.punkte} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.heimId))}</div></div>
-      <div data-team="${esc(slug)}|${esc(s.gastId)}" style="cursor:pointer"><div class="mini">${esc(s.gast)}</div><b>${zg.platz}. Platz · ${zg.punkte} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.gastId))}</div></div></div></div>`:""}
+      <div data-team="${esc(slug)}|${esc(s.heimId)}" style="cursor:pointer"><div class="mini">${esc(s.heim)}</div><b>${zh.platz}. Platz · ${pkt(zh)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.heimId))}</div></div>
+      <div data-team="${esc(slug)}|${esc(s.gastId)}" style="cursor:pointer"><div class="mini">${esc(s.gast)}</div><b>${zg.platz}. Platz · ${pkt(zg)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.gastId))}</div></div></div></div>`:""}
     ${vergleich.length?`<h2>Direkter Vergleich</h2><div class="karte">${vergleich.map(x=>spielZeile(l,x)).join("")}</div>`:""}
     ${s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
   blatt.showModal();
+}
+
+// ------------------------------------------------------------- 7-Meter
+const pz = q => q==null?"–":Math.round(100*q)+"%";
+function siebenTeams(l){
+  const m={}; for(const p of l.torschuetzen){ const k=String(p.teamId); m[k]=m[k]||{teamId:p.teamId,t:0,w:0}; m[k].t+=p.siebenTore||0; m[k].w+=p.siebenWuerfe||0; }
+  return Object.values(m).filter(x=>x.w);
+}
+function abschnittSieben(l){
+  const werfer=l.torschuetzen.filter(p=>p.siebenWuerfe>0);
+  if(!werfer.length) return "";
+  const teams=siebenTeams(l), T=teams.reduce((a,x)=>a+x.t,0), W=teams.reduce((a,x)=>a+x.w,0);
+  const art=S.siebenArt||"werfer";
+  let tab;
+  if(art==="werfer"){
+    const liste=[...werfer].sort((a,b)=>b.siebenTore-a.siebenTore||a.siebenWuerfe-b.siebenWuerfe).slice(0,20);
+    tab=`<table><thead><tr><th>#</th><th>Werfer</th><th>Tore/Würfe</th><th>Quote</th></tr></thead><tbody>${liste.map((p,i)=>{const q=p.siebenTore/p.siebenWuerfe;
+      return `<tr class="${meinTeam(l,p.teamId)?"mein":""}"><td>${i+1}</td><td>${esc(p.name)}<div class="liga-name">${esc(teamName(l,p.teamId))}</div></td><td>${p.siebenTore}/${p.siebenWuerfe}</td><td>${pz(q)}<span class="quote"><b style="width:${100*q}%"></b></span></td></tr>`;}).join("")}</tbody></table>`;
+  } else {
+    const liste=teams.map(x=>({...x,q:x.t/x.w})).sort((a,b)=>b.q-a.q||b.w-a.w);
+    tab=`<table><thead><tr><th></th><th>Team</th><th>Tore/Würfe</th><th>Quote</th></tr></thead><tbody>${liste.map(x=>`<tr class="${meinTeam(l,x.teamId)?"mein":""}"><td></td><td>${esc(teamName(l,x.teamId))}</td><td>${x.t}/${x.w}</td><td>${pz(x.q)}<span class="quote"><b style="width:${100*x.q}%"></b></span></td></tr>`).join("")}</tbody></table>`;
+  }
+  return `<h2>7-Meter</h2><div class="karte kz"><div><b>${W}</b><span>7m-Würfe</span></div><div><b>${pz(W?T/W:null)}</b><span>verwandelt (Liga)</span></div><div><b>${f1(W/Math.max(1,l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null).length))}</b><span>7m je Spiel</span></div></div>
+    <div class="chips"><button class="chip" data-sieben="werfer" aria-pressed="${art==="werfer"}">Je Werfer</button><button class="chip" data-sieben="teams" aria-pressed="${art==="teams"}">Je Team</button></div>
+    <div class="karte tabelle-wrap">${tab}</div><div class="hinweis">Aus den Spielberichten. Werfer sortiert nach verwandelten 7m.</div>`;
+}
+
+// ------------------------------------------------------------- Über- / Unterzahl
+function zahlWerte(x,art){ const sek=x[art+"Sek"], t=x[art+"Tore"], g=x[art+"Gegen"];
+  return {min:sek/60/x.spiele, t, g, d:sek?(t-g)/(sek/120):null}; }
+const plus = v => v==null?"–":(v>0?"+":"")+f1(v);
+function abschnittZahl(l){
+  const z=l.verlauf&&l.verlauf.zahl; if(!z||!z.length) return "";
+  const art=S.zahlArt||"ue";
+  const sum=z.reduce((a,x)=>({spiele:a.spiele+x.spiele,ueSek:a.ueSek+x.ueSek,ueTore:a.ueTore+x.ueTore,ueGegen:a.ueGegen+x.ueGegen,uzSek:a.uzSek+x.uzSek,uzTore:a.uzTore+x.uzTore,uzGegen:a.uzGegen+x.uzGegen}),{spiele:0,ueSek:0,ueTore:0,ueGegen:0,uzSek:0,uzTore:0,uzGegen:0});
+  const L=zahlWerte(sum,art);
+  const teams=z.map(x=>({x,name:teamName(l,x.teamId),w:zahlWerte(x,art)})).sort((a,b)=>(b.w.d??-99)-(a.w.d??-99));
+  return `<h2>Über- &amp; Unterzahl</h2>
+    <div class="chips"><button class="chip" data-zahl="ue" aria-pressed="${art==="ue"}">Überzahl</button><button class="chip" data-zahl="uz" aria-pressed="${art==="uz"}">Unterzahl</button></div>
+    <div class="karte kz"><div><b>${f1(L.min)}</b><span>Min. je Spiel und Team</span></div><div><b>${L.t}:${L.g}</b><span>Tore : Gegentore (Liga)</span></div><div><b>${plus(L.d)}</b><span>Tordiff. je 2 Min.</span></div></div>
+    <div class="karte tabelle-wrap"><table><thead><tr><th></th><th>Team</th><th>Min Ø</th><th>Tore</th><th>+/- je 2'</th></tr></thead><tbody>
+    ${teams.map(({x,name,w})=>`<tr class="klick${meinTeam(l,x.teamId)?" mein":""}" data-team="${esc(l.meta.slug)}|${esc(x.teamId)}"><td></td><td>${esc(name)}</td><td>${f1(w.min)}</td><td>${w.t}:${w.g}</td><td class="pkt">${plus(w.d)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="hinweis">${art==="ue"?"Überzahl: Beim Gegner läuft mindestens eine Zeitstrafe mehr.":"Unterzahl: Beim eigenen Team läuft mindestens eine Zeitstrafe mehr."} „+/- je 2'“ = eigene Tore minus Gegentore je 2 Minuten in dieser Situation (Liga: ${plus(L.d)}). Grundlage: Zeitstrafen und Disqualifikationen in den Spielberichten.</div>`;
+}
+
+// ------------------------------------------------------------- Gegner-Scouting
+function kennzahlen(l,id){
+  const w=teamWerte(l,id), t=l.tabelle.find(x=>String(x.teamId)===String(id));
+  const st=l.teamStrafen.find(x=>String(x.teamId)===String(id));
+  const z=l.verlauf?.zahl?.find(x=>String(x.teamId)===String(id));
+  const a=l.verlauf?.auszeiten?.find(x=>String(x.teamId)===String(id));
+  const s7=siebenTeams(l).find(x=>String(x.teamId)===String(id));
+  return {w,t,st,z,a,s7};
+}
+function seiteGegner(l,id){
+  const na=naechstesSpiel(l,id);
+  if(!na) return `<div class="karte leer" style="margin-top:12px">Kein kommendes Spiel angesetzt.</div>`;
+  const heim=String(na.heimId)===String(id), gid=heim?na.gastId:na.heimId, gname=teamName(l,gid);
+  const A=kennzahlen(l,id), B=kennzahlen(l,gid);
+  const zeilen=[
+    ["Tabellenplatz", k=>k.t?k.t.platz+".":"–"],
+    ["Punkte", k=>k.t?pkt(k.t):"–"],
+    ["Tore Ø", k=>k.w.sp?f1(k.w.tore/k.w.sp):"–"],
+    ["Gegentore Ø", k=>k.w.sp?f1(k.w.gegen/k.w.sp):"–"],
+    [heim?"Bilanz (wir heim / sie ausw.)":"Bilanz (wir ausw. / sie heim)", (k,wir)=>((wir===heim)?k.w.heim:k.w.ausw).join("-")],
+    ["Zeitstrafen Ø", k=>k.st&&k.st.spiele?f1(k.st.zwei/k.st.spiele):"–"],
+    ["Überzahl +/- je 2'", k=>k.z?plus(zahlWerte(k.z,"ue").d):"–"],
+    ["Unterzahl +/- je 2'", k=>k.z?plus(zahlWerte(k.z,"uz").d):"–"],
+    ["7m-Quote", k=>k.s7?`${pz(k.s7.t/k.s7.w)} <span class="liga-name">${k.s7.t}/${k.s7.w}</span>`:"–"],
+    ["Nach Auszeit nächstes Tor", k=>k.a&&(k.a.naechstesEigen+k.a.naechstesGegner)?pz(k.a.naechstesEigen/(k.a.naechstesEigen+k.a.naechstesGegner)):"–"],
+  ];
+  const werfer=l.torschuetzen.filter(p=>String(p.teamId)===String(gid)&&p.tore>0).slice(0,8);
+  const gTore=B.w.tore||1;
+  const v=l.verlauf, vt=v?.teams?.find(x=>String(x.teamId)===String(gid));
+  let phasen="";
+  if(vt&&vt.spiele){
+    const pro=a=>a.map(x=>x/vt.spiele), linie={name:"Liga-Schnitt",farbe:"--s-schnitt",werte:v.ligaSchnitt};
+    const sT=[{name:gname,farbe:"--s-team",werte:pro(vt.tore)}], sG=[{name:gname,farbe:"--s-liga",werte:pro(vt.gegen)}];
+    phasen=`<h2>Wann trifft ${esc(gname)}?</h2>
+      <div class="karte"><div class="diag-titel">Geworfene Tore pro Spiel</div>${legende(sT,linie)}${saeulen(v.labels,sT,linie)}</div>
+      <div class="karte"><div class="diag-titel">Gegentore pro Spiel</div>${legende(sG,linie)}${saeulen(v.labels,sG,linie)}</div>`;
+  }
+  // automatische Auffälligkeiten
+  const hin=[];
+  if(werfer[0]&&B.w.sp){ const ant=werfer[0].tore/(B.w.tore||1); if(ant>=0.2) hin.push(`<b>${esc(werfer[0].name)}</b> wirft ${pz(ant)} der Tore (${f1(werfer[0].tore/werfer[0].spiele)} je Spiel).`); }
+  const sieb=l.torschuetzen.filter(p=>String(p.teamId)===String(gid)&&p.siebenWuerfe>0).sort((a,b)=>b.siebenWuerfe-a.siebenWuerfe);
+  if(sieb[0]) hin.push(`7m-Schütze meist <b>${esc(sieb[0].name)}</b>: ${sieb[0].siebenTore}/${sieb[0].siebenWuerfe} (${pz(sieb[0].siebenTore/sieb[0].siebenWuerfe)}).`);
+  if(vt&&vt.spiele){ const d=(arr)=>arr.map((x,i)=>x/vt.spiele-v.ligaSchnitt[i]);
+    const dt=d(vt.tore), dg=d(vt.gegen); const it=dt.indexOf(Math.max(...dt)), ig=dg.indexOf(Math.max(...dg)), iw=dg.indexOf(Math.min(...dg));
+    hin.push(`Stärkste Angriffsphase: <b>${esc(v.labels[it])} Min.</b> (${plus(dt[it])} Tore über Schnitt).`);
+    hin.push(`Kassiert am meisten in <b>${esc(v.labels[ig])} Min.</b> (${plus(dg[ig])}), am wenigsten in ${esc(v.labels[iw])} Min.`); }
+  if(B.z){ const ue=zahlWerte(B.z,"ue").d, uz=zahlWerte(B.z,"uz").d, L=l.verlauf.zahl.reduce((a,x)=>({s:a.s+x.uzSek,t:a.t+x.uzTore,g:a.g+x.uzGegen}),{s:0,t:0,g:0});
+    const lUz=L.s?(L.t-L.g)/(L.s/120):null;
+    if(uz!=null&&lUz!=null) hin.push(`In Unterzahl ${uz>lUz?"<b>stabiler</b>":"<b>anfälliger</b>"} als der Liga-Schnitt (${plus(uz)} gegen ${plus(lUz)} je 2 Min.) – ${uz>lUz?"eigene Überzahl konsequent ausspielen":"eigene Überzahl ist eine Chance"}.`); }
+  if(B.st&&B.st.spiele&&A.st&&A.st.spiele) hin.push(`Zeitstrafen: ${f1(B.st.zwei/B.st.spiele)} je Spiel (wir: ${f1(A.st.zwei/A.st.spiele)}).`);
+  const duelle=l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null&&((String(x.heimId)===String(id)&&String(x.gastId)===String(gid))||(String(x.heimId)===String(gid)&&String(x.gastId)===String(id))));
+  const letzte=teamSpiele(l,gid).filter(x=>x.status==="beendet"&&x.hTore!=null).slice(-5).reverse();
+  return `<h2>Nächstes Spiel</h2><div class="karte">${spielZeile(l,na,id)}</div>
+    ${hin.length?`<h2>Auffällig bei ${esc(gname)}</h2><div class="karte"><ul class="scout">${hin.map(h=>`<li>${h}</li>`).join("")}</ul></div>`:""}
+    <h2>Vergleich</h2><div class="karte tabelle-wrap"><table class="vgl"><thead><tr><th></th><th>Wir</th><th>Gegner</th></tr></thead><tbody>
+      ${zeilen.map(([n,f])=>`<tr><td>${esc(n)}</td><td>${f(A,true)}</td><td>${f(B,false)}</td></tr>`).join("")}</tbody></table></div>
+    <h2>Gefährlichste Werfer</h2>${werfer.length?`<div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Spieler</th><th>Sp</th><th>Tore</th><th>Ø</th><th>7m</th><th>2'</th></tr></thead><tbody>
+      ${werfer.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}<div class="balken"><div style="width:${100*p.tore/werfer[0].tore}%"></div></div></td><td>${p.spiele}</td><td class="pkt">${p.tore}</td><td>${f1(p.tore/p.spiele)}</td><td>${p.siebenWuerfe?`${p.siebenTore}/${p.siebenWuerfe}`:"–"}</td><td>${p.zwei||"–"}</td></tr>`).join("")}</tbody></table></div>`:`<div class="karte leer">Noch keine Spielberichte.</div>`}
+    ${phasen}
+    ${duelle.length?`<h2>Bisherige Duelle</h2><div class="karte">${duelle.map(x=>spielZeile(l,x,id)).join("")}</div>`:""}
+    <h2>Letzte Spiele von ${esc(gname)}</h2><div class="karte">${letzte.map(x=>spielZeile(l,x,gid)).join("")||'<div class="leer">Noch keine.</div>'}</div>
+    <div class="hinweis">Alle Werte aus Ergebnissen und Spielberichten dieser Saison.</div>`;
 }
 
 // ------------------------------------------------------------- Diagramme
@@ -451,6 +563,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-zurueck]")){ try{ if(history.state&&history.state.team){ history.back(); return; } }catch(_){} schliesseTeam(); return; }
   const tb=e.target.closest("[data-tab]"); if(tb){S.tab=tb.dataset.tab;zeichne();return;}
   const um=e.target.closest("[data-umfang]"); if(um){S.umfang=um.dataset.umfang;zeichne();return;}
+  const za=e.target.closest("[data-zahl]"); if(za){S.zahlArt=za.dataset.zahl;zeichne();return;}
+  const si=e.target.closest("[data-sieben]"); if(si){S.siebenArt=si.dataset.sieben;zeichne();return;}
   const sa=e.target.closest("[data-schnitt]"); if(sa){S.schnittArt=sa.dataset.schnitt;zeichne();return;}
   const vw=e.target.closest("[data-verlauf]"); if(vw){const [a,b]=vw.dataset.verlauf.split("|");S.verlaufTeam={...(S.verlaufTeam||{}),[a]:b};zeichne();
     document.querySelector("[data-verlaufwahl]")?.scrollIntoView({behavior:"smooth",block:"start"});return;}

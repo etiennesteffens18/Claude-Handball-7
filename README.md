@@ -1,4 +1,4 @@
-# Hallenbuch – deine Handball-Web-App
+# Handball 7 – deine Handball-Web-App
 
 Spiele, Tabellen und Statistiken deiner Ligen auf einer Seite – fürs Handy optimiert,
 installierbar wie eine App. Läuft komplett kostenlos auf GitHub.
@@ -96,3 +96,8 @@ die Seite ist öffentlich erreichbar.
 - Die Daten gehören DHB bzw. den Verbänden. Für private Nutzung und dein Team gedacht,
   nicht für kommerzielle Weiterverbreitung.
 - Lokal testen: `python scripts/abruf.py` und dann `python -m http.server -d docs`.
+
+## Neu
+- **Gegner-Reiter**: Scouting für das nächste Spiel (Vergleich, gefährlichste Werfer, Torphasen, Auffälligkeiten).
+- **Über- und Unterzahl** je Team und **7-Meter-Quote** je Werfer und Team.
+- Tabelle mit Plus- und Minuspunkten (z. B. 10:2).

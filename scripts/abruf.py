@@ -296,7 +296,63 @@ def zeit_und_auszeiten(spiele: list[dict], cache: dict, hz: int) -> dict:
             for i in range(N)]
     return {"halbzeit": hz, "labels": labels, "ligaSchnitt": liga,
             "teams": [{"teamId": k, **v} for k, v in teams.items()],
-            "auszeiten": [{"teamId": k, **v} for k, v in auszeiten.items()]}
+            "auszeiten": [{"teamId": k, **v} for k, v in auszeiten.items()],
+            "zahl": ueber_unterzahl(spiele, cache, hz)}
+
+
+ZEITSTRAFE = ("zwei minuten", "2 min", "zeitstrafe", "zwei-minuten")
+
+
+def ueber_unterzahl(spiele: list[dict], cache: dict, hz: int) -> list[dict]:
+    """Tore und Gegentore in Über- und Unterzahl je Team.
+
+    Jede Zeitstrafe (und jede Disqualifikation ohne gleichzeitige Zeitstrafe)
+    schwächt das Team 2 Minuten lang. Ein Team ist in Überzahl, wenn beim
+    Gegner mehr Strafen laufen als bei ihm selbst – und umgekehrt.
+    Gezählt werden Sekunden sowie Tore/Gegentore in diesen Phasen.
+    """
+    teams: dict = {}
+    for sp in spiele:
+        bericht = cache.get(str(sp["id"]))
+        if not bericht or sp["status"] != "beendet" or bericht.get("v") != CACHE_VERSION:
+            continue
+        ev = [e for e in bericht["ereignisse"] if e.get("sek") is not None]
+        if not any(e["tor"] for e in ev):
+            continue
+        seiten = {sp["heimId"]: sp["gastId"], sp["gastId"]: sp["heimId"]}
+        strafen = {t: [] for t in seiten}
+        zwei_zeit = {(e["team"], e["sek"]) for e in ev if any(z in e["art"].lower() for z in ZEITSTRAFE)}
+        for e in ev:
+            art = e["art"].lower()
+            if e["team"] not in seiten:
+                continue
+            if any(z in art for z in ZEITSTRAFE) or \
+                    ("disqualifikation" in art and (e["team"], e["sek"]) not in zwei_zeit):
+                strafen[e["team"]].append(e["sek"])
+        ende = max([2 * hz * 60] + [e["sek"] for e in ev])
+        aktiv = lambda t, s: sum(1 for a in strafen[t] if a < s <= a + 120)
+        for t, g in seiten.items():
+            st = teams.setdefault(t, {"spiele": 0, "ueSek": 0, "ueTore": 0, "ueGegen": 0,
+                                      "uzSek": 0, "uzTore": 0, "uzGegen": 0})
+            st["spiele"] += 1
+            for s in range(1, ende + 1):
+                d = aktiv(g, s) - aktiv(t, s)
+                if d > 0:
+                    st["ueSek"] += 1
+                elif d < 0:
+                    st["uzSek"] += 1
+        for e in ev:
+            if not e["tor"] or e["team"] not in seiten:
+                continue
+            t, g = e["team"], seiten[e["team"]]
+            d = aktiv(g, e["sek"]) - aktiv(t, e["sek"])
+            if d > 0:
+                teams[t]["ueTore"] += 1
+                teams[g]["uzGegen"] += 1
+            elif d < 0:
+                teams[t]["uzTore"] += 1
+                teams[g]["ueGegen"] += 1
+    return [{"teamId": k, **v} for k, v in teams.items()]
 
 
 def bericht_hbnet(sp: dict) -> list[dict] | None:
