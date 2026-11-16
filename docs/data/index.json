@@ -1,5 +1,5 @@
 {
- "aktualisiert": "2026-11-16T13:15:17+00:00",
+ "aktualisiert": "2026-11-16T19:03:51+00:00",
  "saison": "2026/27",
  "ligen": [
   {
@@ -51,7 +51,8 @@
    "meineTeams": [
     "JANO Filder 2"
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
+   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "abrufFehler": false,
    "tabelleQuelle": "verband"
   },
   {
@@ -64,7 +65,8 @@
    "meineTeams": [
     "JANO Filder 2"
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
+   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "abrufFehler": false,
    "tabelleQuelle": "verband"
   },
   {
@@ -77,7 +79,8 @@
    "meineTeams": [
     "JANO Filder"
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
+   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "abrufFehler": false,
    "tabelleQuelle": "verband"
   }
  ]
