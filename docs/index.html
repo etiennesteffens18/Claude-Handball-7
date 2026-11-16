@@ -275,7 +275,7 @@ function seiteStatistik(){
   const fertig=l.spiele.filter(s=>s.status==="beendet"&&s.hTore!=null);
   const toreGesamt=fertig.reduce((a,s)=>a+s.hTore+s.gTore,0);
   const heimSiege=fertig.filter(s=>s.hTore>s.gTore).length;
-  let html=`<h2>Liga auf einen Blick</h2><div class="karte kz">
+  let html=`${l.meta.berichteNur?`<div class="hinweis" style="background:var(--akzent-weich);padding:10px 12px;border-radius:10px;margin:12px 0 0">Spielberichte ausgewertet: nur die Spiele von ${esc(l.meta.berichteNur.map(id=>teamName(l,id)).join(', '))}. Werte anderer Teams und der Liga-Schnitt beruhen deshalb nur auf diesen Partien.</div>`:""}<h2>Liga auf einen Blick</h2><div class="karte kz">
     <div><b>${fertig.length}</b><span>Spiele</span></div>
     <div><b>${fertig.length?f1(toreGesamt/fertig.length):"–"}</b><span>Tore/Spiel</span></div>
     <div><b>${fertig.length?Math.round(100*heimSiege/fertig.length)+"%":"–"}</b><span>Heimsiege</span></div></div>`;
