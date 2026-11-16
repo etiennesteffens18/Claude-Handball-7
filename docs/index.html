@@ -205,7 +205,7 @@ function seiteUebersicht(){
       <div class="tk-zeile"><span class="tk-text leise" style="white-space:normal">${l.meta.quelle==="h4a"?"Handball4All":"handball.net"} lässt den automatischen Abruf zurzeit nicht zu.</span></div>
       <div class="tk-zeile"><a class="tk-text" style="white-space:normal" href="${esc(l.meta.quelle==="handballnet"?`https://www.handball.net/team/${id}`:(l.meta.link||"#"))}" target="_blank" rel="noopener">Spiele &amp; Tabelle auf ${l.meta.quelle==="h4a"?"Handball4All":"handball.net"} ansehen ↗</a></div></div>`); continue; }
     karten.push(`<button class="tkarte" data-oeffne="${esc(l.meta.slug)}|${esc(id)}">
-      <div class="tk-kopf"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.kurz)}</div></div>
+      <div class="tk-kopf"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.kurz)}${l.meta.manuell?` · Stand ${new Date(l.meta.aktualisiert).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</div></div>
         ${z?`<div class="platz">${z.platz}.<small>Platz</small></div>`:""}</div>
       <div class="tk-zeile"><span class="tk-lab">Letztes</span>${le?`<span class="erg-mini ${ausgang(le,id)}">${ergebnisAusSicht(le,id)}</span><span class="tk-text">${esc(gegner(le,id))}</span><span class="tk-dat">${kurzDatum(le.datum)}</span>`:`<span class="tk-text leise">noch keins</span>`}</div>
       <div class="tk-zeile"><span class="tk-lab">Nächstes</span>${na?`<span class="tk-zeit${na.status==="live"?" live":""}">${na.status==="live"?"LIVE":`${kurzDatum(na.datum)} ${uhr(na.datum)}`}</span><span class="tk-text">${esc(gegner(na,id))}</span>`:`<span class="tk-text leise">${l.meta.teildaten?"kommt mit dem ersten Abruf":"keins angesetzt"}</span>`}</div>
@@ -241,7 +241,7 @@ function seiteTeam(){
   } else if(S.tab==="tabelle") inhalt=seiteTabelle();
   else inhalt=seiteStatistik();
   return `<button class="zurueck" data-zurueck>‹ Alle Teams</button>
-    <div class="team-titel"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.name)}</div>
+    <div class="team-titel"><div><b>${esc(teamName(l,id))}</b><div class="liga-name">${esc(l.meta.name)}${l.meta.manuell?` · Stand ${new Date(l.meta.aktualisiert).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}`:""}</div>
       <div style="margin-top:6px">${formHtml(form(l,id))}</div></div>
       ${z?`<div class="platz">${z.platz}.<small>${z.punkte} Pkt · ${z.sp} Sp</small></div>`:""}</div>
     <div class="reiter">${[["spiele","Spiele"],["tabelle","Tabelle"],["statistik","Statistik"]].map(([k,n])=>`<button data-tab="${k}" aria-pressed="${S.tab===k}">${n}</button>`).join("")}</div>

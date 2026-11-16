@@ -12,8 +12,10 @@
    "meineTeams": [
     87031
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
-   "tabelleQuelle": "berechnet"
+   "aktualisiert": "2026-11-16T22:41:06+00:00",
+   "tabelleQuelle": "verband",
+   "abrufFehler": false,
+   "manuell": true
   },
   {
    "slug": "jblh-b-vr8",
@@ -25,8 +27,10 @@
    "meineTeams": [
     87032
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
-   "tabelleQuelle": "berechnet"
+   "aktualisiert": "2026-11-16T22:41:06+00:00",
+   "tabelleQuelle": "verband",
+   "abrufFehler": false,
+   "manuell": true
   },
   {
    "slug": "3liga-sued",
@@ -38,8 +42,10 @@
    "meineTeams": [
     87352
    ],
-   "aktualisiert": "2026-11-16T13:15:17+00:00",
-   "tabelleQuelle": "berechnet"
+   "aktualisiert": "2026-11-16T22:41:06+00:00",
+   "tabelleQuelle": "verband",
+   "abrufFehler": false,
+   "manuell": true
   },
   {
    "slug": "ma-rl-bw",
