@@ -1,0 +1,37 @@
+name: Daten abrufen
+
+on:
+  schedule:
+    # Wochenende (Spieltage) stündlich 9–23 Uhr, unter der Woche zweimal täglich (UTC-Zeiten)
+    - cron: "17 8-22 * * 6,0"
+    - cron: "17 6,18 * * 1-5"
+  workflow_dispatch: {}        # "Run workflow"-Knopf zum manuellen Starten
+
+permissions:
+  contents: write
+
+concurrency:
+  group: abruf
+  cancel-in-progress: false
+
+jobs:
+  abruf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PDF-Leser installieren (für Handball4All-Spielberichte)
+        run: pip install pypdf
+      - name: Spiele, Tabellen und Spielberichte holen
+        run: python scripts/abruf.py
+      - name: Änderungen speichern
+        run: |
+          git config user.name "abruf-bot"
+          git config user.email "abruf-bot@users.noreply.github.com"
+          git add docs/data cache
+          if git diff --cached --quiet; then echo "Nichts Neues."; exit 0; fi
+          git commit -m "Daten aktualisiert $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push
