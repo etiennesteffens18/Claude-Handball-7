@@ -403,6 +403,47 @@ def rekorde(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool) -> dic
     return {"spielerTore": spieler[:5], "serien": serien[:5]}
 
 
+def spielverlaeufe(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool) -> dict:
+    """Kompakter Verlauf je Spiel für die Spielansicht (wird erst beim Öffnen geladen).
+    e: "sek|Code|H/G;…" mit Code T=Tor, 7=7m-Tor, F=7m vergeben, A=Auszeit, Z=2 Min., R=Disq., V=Verwarnung
+    s: Torschützen [[Name, "H"/"G", Tore, 7m-Tore]]"""
+    aus = {}
+    for sp in spiele:
+        b = cache.get(str(sp["id"]))
+        if not b or sp["status"] not in ("beendet", "live"):
+            continue
+        seite = {sp["heimId"]: "H", sp["gastId"]: "G"}
+        teile, schuetzen = [], {}
+        for e in sorted((e for e in b["ereignisse"] if e.get("sek") is not None), key=lambda e: e["sek"]):
+            si = seite.get(e["team"])
+            if not si:
+                continue
+            art = (e["art"] or "").lower()
+            sieben = "siebenmeter" in art or "7m" in art
+            if e["tor"]:
+                code = "7" if sieben else "T"
+                if e.get("spieler"):
+                    z = schuetzen.setdefault(str(e["spieler"]), [anzeigename(e["vor"], e["nach"], jugend, kuerzen), si, 0, 0])
+                    z[2] += 1
+                    z[3] += 1 if sieben else 0
+            elif sieben:
+                code = "F"
+            elif "auszeit" in art or "timeout" in art:
+                code = "A"
+            elif "zwei" in art or "2 min" in art or "zeitstrafe" in art:
+                code = "Z"
+            elif "disqualifikation" in art or "rot" in art:
+                code = "R"
+            elif "verwarnung" in art or "gelb" in art:
+                code = "V"
+            else:
+                continue
+            teile.append(f"{e['sek']}|{code}|{si}")
+        if teile:
+            aus[str(sp["id"])] = {"e": ";".join(teile), "s": sorted(schuetzen.values(), key=lambda z: -z[2])}
+    return aus
+
+
 def bericht_hbnet(sp: dict) -> list[dict] | None:
     """Spielverlauf von handball.net (JSON)."""
     antwort = hole(f"{HBNET}/matches/{sp['id']}/events")
@@ -844,6 +885,10 @@ def main() -> int:
         meta["aktualisiert"] = jetzt
         meta["abrufFehler"] = not daten["spiele"]
         meta["tabelleQuelle"] = tabelle_quelle
+        if liga["quelle"] == "h4a":                   # Spielverläufe für die Spielansicht (eigene Datei)
+            (AUSGABE / f"verlauf-{liga['slug']}.json").write_text(json.dumps(
+                spielverlaeufe(daten["spiele"], cache, liga.get("jugend", False), kuerzen),
+                ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         ziel = AUSGABE / f"{liga['slug']}.json"
         try:                                          # nichts geändert → alten Zeitstempel behalten (kein Commit)
             alt = json.loads(ziel.read_text(encoding="utf-8"))

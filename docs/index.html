@@ -172,6 +172,16 @@ body{touch-action:pan-y pinch-zoom}
 .karte-g{background:#f2c200}.karte-r{background:#d63a2f;color:#fff}
 table.spieler td,table.spieler th{padding-left:4px;padding-right:4px}
 table.rek{width:100%}table.rek td{vertical-align:middle}table.rek td.pkt{text-align:right;white-space:nowrap}
+a.route{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--linie);color:inherit;text-decoration:none;font-size:14px}
+a.route b{color:var(--akzent);white-space:nowrap}
+svg.verlauf{width:100%;height:auto;display:block;touch-action:pan-y}
+.vl-kopf{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--leise);margin-bottom:4px}
+.vl-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;opacity:.6;vertical-align:-1px}
+.vl-info{text-align:center;font-size:14px;margin:2px 0 8px;min-height:20px}
+.vl-kz{margin:0}
+.ts{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:14px;border-bottom:1px solid var(--linie)}
+.ts:last-child{border-bottom:0}.ts small{color:var(--leise);font-weight:400}
+.ts-liste>div{min-width:0}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -439,7 +449,8 @@ function spielBlatt(slug,id){
   const zh=l.tabelle.find(t=>String(t.teamId)===String(s.heimId)), zg=l.tabelle.find(t=>String(t.teamId)===String(s.gastId));
   $("#blatt-innen").innerHTML=`<button class="zu" onclick="blatt.close()" aria-label="Schließen">×</button>
     <h2 style="margin-top:4px">${esc(l.meta.kurz)}${s.runde?" · "+s.runde+". Spieltag":""}</h2>
-    <div class="karte">${spielZeile(l,s)}</div>
+    <div class="karte">${spielZeile(l,s)}${s.halle?`<a class="route" href="${esc(routeUrl(l,s))}" target="_blank" rel="noopener">${PIN} ${esc(s.halle)} <b>Route ↗</b></a>`:""}</div>
+    <div id="verlauf-box">${s.status==="beendet"||s.status==="live"?'<div class="karte leer">Spielverlauf wird geladen …</div>':""}</div>
     ${zh&&zg?`<h2>Vor dem Spiel</h2><div class="karte"><div class="zwei">
       <div data-team="${esc(slug)}|${esc(s.heimId)}" style="cursor:pointer"><div class="mini">${esc(s.heim)}</div><b>${zh.platz}. Platz · ${pkt(zh)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.heimId))}</div></div>
       <div data-team="${esc(slug)}|${esc(s.gastId)}" style="cursor:pointer"><div class="mini">${esc(s.gast)}</div><b>${zg.platz}. Platz · ${pkt(zg)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.gastId))}</div></div></div></div>`:""}
@@ -447,7 +458,68 @@ function spielBlatt(slug,id){
     ${HBNET_MATCH[l.meta.slug]?`<div class="hinweis"><a href="${esc(tickerUrl(l,s))}" target="_blank" rel="noopener">${s.status==="beendet"?"Spielbericht & Liveticker auf handball.net":"Liveticker auf handball.net"} ↗</a></div>`
       :s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
   blatt.showModal();
+  if(s.status==="beendet"||s.status==="live") ladeVerlauf(l).then(v=>{ const box=$("#verlauf-box"); if(box&&blatt.open) box.innerHTML=spielverlaufHtml(l,s,v&&v[String(s.id)]); });
 }
+// ------------------------------------------------------------- Spielverlauf & Route
+const PIN='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="vertical-align:-3px"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="currentColor"/></svg>';
+function routeUrl(l,s){ const q=/,/.test(s.halle)?s.halle:`${s.halle} ${s.heim}`; return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q); }
+const verlaufCache={};
+function ladeVerlauf(l){
+  const k=l.meta.slug; if(verlaufCache[k]) return verlaufCache[k];
+  if(window.EINGEBETTET) return verlaufCache[k]=Promise.resolve((window.EINGEBETTET.verlaeufe||{})[k]||null);
+  return verlaufCache[k]=fetch(`data/verlauf-${k}.json`,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
+}
+function spielverlaufHtml(l,s,v){
+  if(!v) return `<div class="karte leer">Für dieses Spiel gibt es keinen Spielverlauf.</div>`;
+  const ev=v.e?v.e.split(";").map(x=>{const [t,c,si]=x.split("|");return {t:+t,c,si};}):[];
+  const sch=(si)=>v.s.filter(z=>z[1]===si).map(z=>`<div class="ts"><span>${esc(z[0])}</span><b>${z[2]}${z[3]?`<small> (${z[3]}/7m)</small>`:""}</b></div>`).join("")||'<div class="leise">–</div>';
+  const tsHtml=`<h2>Torschützen</h2><div class="karte"><div class="zwei ts-liste"><div><div class="mini">${esc(s.heim)}</div>${sch("H")}</div><div><div class="mini">${esc(s.gast)}</div>${sch("G")}</div></div></div>`;
+  if(!ev.some(e=>e.c==="T"||e.c==="7")) return tsHtml;
+  const hz=(l.verlauf&&l.verlauf.halbzeit)||30, ende=Math.max(hz*120,...ev.map(e=>e.t));
+  let h=0,g=0,maxH=0,maxG=0,wechsel=0,fuehrt=0,hzStand=null; const punkte=[{t:0,h:0,g:0}];
+  for(const e of ev){ if(e.c!=="T"&&e.c!=="7") continue;
+    if(hzStand==null&&e.t>hz*60) hzStand=[h,g];
+    e.si==="H"?h++:g++; punkte.push({t:e.t,h,g});
+    maxH=Math.max(maxH,h-g); maxG=Math.max(maxG,g-h);
+    const f=Math.sign(h-g); if(f&&fuehrt&&f!==fuehrt) wechsel++; if(f) fuehrt=f; }
+  if(hzStand==null) hzStand=[h,g];
+  const W=340,H=170,L=26,R=8,T=14,B=26, iw=W-L-R, ih=H-T-B;
+  const d=Math.max(3,maxH,maxG), x=t=>L+iw*t/ende, y=v=>T+ih/2-(ih/2)*v/d;
+  let pfad=`M${x(0)},${y(0)}`; for(const p of punkte.slice(1)) pfad+=`H${x(p.t).toFixed(1)}V${y(p.h-p.g).toFixed(1)}`; pfad+=`H${x(ende)}`;
+  const flaeche=pfad+`V${y(0)}H${x(0)}Z`;
+  const ticks=[]; for(let m=0;m<=ende/60;m+=10) ticks.push(m);
+  const marker=ev.filter(e=>e.c==="A"||e.c==="Z"||e.c==="R").map(e=>{
+    const oben=e.si==="H", farbe=oben?"var(--s-team)":"var(--s-liga)";
+    if(e.c==="A") return `<line x1="${x(e.t)}" x2="${x(e.t)}" y1="${T}" y2="${H-B}" stroke="${farbe}" stroke-dasharray="3 3" stroke-width="1"/><text x="${x(e.t)}" y="${oben?T-3:H-B+9}" font-size="9" text-anchor="middle" fill="${farbe}" font-weight="700">A</text>`;
+    return `<rect x="${x(e.t)-2}" y="${oben?T:H-B-6}" width="4" height="6" rx="1" fill="${e.c==="R"?"#d63a2f":"#9aa3af"}"><title>${e.c==="R"?"Disqualifikation":"2 Minuten"} ${esc(oben?s.heim:s.gast)}</title></rect>`; }).join("");
+  const svg=`<svg class="verlauf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Spielstandsverlauf">
+    <defs><clipPath id="vo"><rect x="0" y="0" width="${W}" height="${y(0)}"/></clipPath><clipPath id="vu"><rect x="0" y="${y(0)}" width="${W}" height="${H}"/></clipPath></defs>
+    ${ticks.map(m=>`<line x1="${x(m*60)}" x2="${x(m*60)}" y1="${T}" y2="${H-B}" stroke="var(--linie)" stroke-width="1"/><text x="${x(m*60)}" y="${H-B+20}" font-size="9" text-anchor="middle" fill="var(--leise)">${m}'</text>`).join("")}
+    <line x1="${x(hz*60)}" x2="${x(hz*60)}" y1="${T}" y2="${H-B}" stroke="var(--leise)" stroke-width="1.5"/>
+    <line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--leise)" stroke-width="1"/>
+    <text x="${L-4}" y="${y(d)+4}" font-size="9" text-anchor="end" fill="var(--leise)">+${d}</text><text x="${L-4}" y="${y(-d)+4}" font-size="9" text-anchor="end" fill="var(--leise)">+${d}</text>
+    <path d="${flaeche}" fill="var(--s-team)" opacity=".22" clip-path="url(#vo)"/><path d="${flaeche}" fill="var(--s-liga)" opacity=".22" clip-path="url(#vu)"/>
+    <path d="${pfad}" fill="none" stroke="var(--tinte)" stroke-width="2" stroke-linejoin="round"/>
+    ${marker}
+    <line class="vl-cursor" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="var(--tinte)" stroke-width="1" opacity="0"/>
+  </svg>`;
+  window._vl={punkte,ende,L,iw,heim:s.heim,gast:s.gast};
+  return `<h2>Spielverlauf</h2><div class="karte">
+    <div class="vl-kopf"><span class="vl-leg"><i style="background:var(--s-team)"></i>${esc(s.heim)} vorn</span><span class="vl-leg"><i style="background:var(--s-liga)"></i>${esc(s.gast)} vorn</span></div>
+    ${svg}<div class="vl-info" id="vl-info">Halbzeit ${hzStand[0]}:${hzStand[1]} · Endstand ${s.hTore!=null?`${s.hTore}:${s.gTore}`:`${h}:${g}`}</div>
+    ${s.hTore!=null&&(s.hTore!==h||s.gTore!==g)?`<div class="hinweis" style="text-align:center;margin:-4px 0 8px">Im Online-Bericht fehlen einzelne Tore (Verlauf zählt ${h}:${g}).</div>`:""}
+    <div class="kz vl-kz"><div><b>+${maxH}</b><span>höchste Führung ${esc(teamName(l,s.heimId))}</span></div><div><b>+${maxG}</b><span>höchste Führung ${esc(teamName(l,s.gastId))}</span></div><div><b>${wechsel}</b><span>Führungs&shy;wechsel</span></div></div>
+    <div class="hinweis" style="margin:4px 0 0">Über der Mittellinie = ${esc(s.heim)} vorn, darunter = ${esc(s.gast)} vorn. A = Auszeit, grau = 2 Min., rot = Disqualifikation (oben Heim, unten Gast). Finger über das Diagramm ziehen zeigt den Spielstand.</div></div>`+tsHtml;
+}
+function vlZeigen(e){
+  const svg=e.target.closest&&e.target.closest("svg.verlauf"); if(!svg||!window._vl) return;
+  const r=svg.getBoundingClientRect(), px=((e.touches?e.touches[0].clientX:e.clientX)-r.left)*340/r.width;
+  const V=window._vl, t=Math.max(0,Math.min(V.ende,(px-V.L)/V.iw*V.ende));
+  let p=V.punkte[0]; for(const q of V.punkte){ if(q.t<=t) p=q; else break; }
+  const c=svg.querySelector(".vl-cursor"); c.setAttribute("x1",px); c.setAttribute("x2",px); c.setAttribute("opacity",".5");
+  const info=document.getElementById("vl-info"); if(info) info.innerHTML=`<b>${Math.floor(t/60)+1}. Min.</b> · ${esc(V.heim)} <b>${p.h}:${p.g}</b> ${esc(V.gast)}`;
+}
+document.addEventListener("pointermove",vlZeigen); document.addEventListener("pointerdown",vlZeigen); document.addEventListener("touchmove",vlZeigen,{passive:true});
 
 function rekordListen(l){
   const r=l.rekorde; if(!r) return "";
