@@ -689,7 +689,7 @@ function abschnittZusammenfassung(l){
     <div class="karte"><div class="fazit-kopf">${t?`<b>${t.platz}. Platz</b> · ${pkt(t)} Punkte · `:""}${K.w.sp} Spiele, Tore ${K.w.tore}:${K.w.gegen} (${plus((K.w.tore-K.w.gegen)/K.w.sp)} je Spiel)</div>
       ${f.length?`<div class="fazit-form">Letzte Spiele ${formHtml(f)} <span class="liga-name">${trend}</span></div>`:""}${fokus}</div>
     ${g2.length?`<div class="karte"><div class="diag-titel">Stärken</div><ul class="fazit">${g2.map(e=>li(e,"plus")).join("")}</ul></div>`:""}
-    ${b2.length?`<div class="karte"><div class="diag-titel">Darauf eingehen</div><ul class="fazit">${b2.map(e=>li(e,"minus")).join("")}</ul></div>`:""}
+    ${b2.length?`<div class="karte"><div class="diag-titel">Auffälligkeiten</div><ul class="fazit">${b2.map(e=>li(e,"minus")).join("")}</ul></div>`:""}
     ${!g2.length&&!b2.length?`<div class="karte leer">Keine besonderen Auffälligkeiten – überall nahe am Liga-Schnitt.</div>`:""}
     <div class="hinweis">Automatisch erstellt: Vergleich mit allen Teams der Liga${nurEigene?" (Werte aus Spielberichten nur gegen den Liga-Schnitt, da nicht alle Berichte vorliegen)":""}. „Sehr auffällig" = deutlich vom Schnitt entfernt.</div>`;
 }
