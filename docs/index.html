@@ -179,8 +179,14 @@ svg.verlauf{width:100%;height:auto;display:block;touch-action:pan-y}
 .vl-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;opacity:.6;vertical-align:-1px}
 .vl-info{text-align:center;font-size:14px;margin:2px 0 8px;min-height:20px}
 .vl-kz{margin:0}
-.ts{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:14px;border-bottom:1px solid var(--linie)}
-.ts:last-child{border-bottom:0}.ts small{color:var(--leise);font-weight:400}
+.ts{display:grid;grid-template-columns:minmax(0,1fr) 2.6em 1.8em;gap:4px;align-items:baseline;padding:4px 0;font-size:14px;border-bottom:1px solid var(--linie)}
+.ts:last-child{border-bottom:0}
+.ts-name{overflow-wrap:break-word;line-height:1.25}
+.ts-7m{text-align:right;color:var(--leise);font-size:12px;font-family:var(--mono)}
+.ts-tore{text-align:right;font-family:var(--mono)}
+.ts-kopf{font-size:10px;color:var(--leise);text-transform:uppercase;letter-spacing:.05em;padding:0 0 2px}
+.ts-kopf span{text-align:right}
+.ts-liste{gap:14px}
 .ts-liste>div{min-width:0}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
@@ -472,8 +478,14 @@ function ladeVerlauf(l){
 function spielverlaufHtml(l,s,v){
   if(!v) return `<div class="karte leer">Für dieses Spiel gibt es keinen Spielverlauf.</div>`;
   const ev=v.e?v.e.split(";").map(x=>{const [t,c,si]=x.split("|");return {t:+t,c,si};}):[];
-  const sch=(si)=>v.s.filter(z=>z[1]===si).map(z=>`<div class="ts"><span>${esc(z[0])}</span><b>${z[2]}${z[3]?`<small> (${z[3]}/7m)</small>`:""}</b></div>`).join("")||'<div class="leise">–</div>';
-  const tsHtml=`<h2>Torschützen</h2><div class="karte"><div class="zwei ts-liste"><div><div class="mini">${esc(s.heim)}</div>${sch("H")}</div><div><div class="mini">${esc(s.gast)}</div>${sch("G")}</div></div></div>`;
+  const ohneWuerfe=v.s.some(z=>z[3]&&z[4]==null);
+  const sch=(si)=>{ const liste=v.s.filter(z=>z[1]===si&&(z[2]>0||z[4])).sort((a,b)=>b[2]-a[2]||(b[3]||0)-(a[3]||0)||a[0].localeCompare(b[0]));
+    if(!liste.length) return '<div class="leise">–</div>';
+    return `<div class="ts ts-kopf"><span></span><span>7m</span><span>Tore</span></div>`+liste.map(z=>{
+      const m=z[4]!=null?(z[4]?`${z[3]}/${z[4]}`:""):(z[3]?`${z[3]}/–`:"");
+      return `<div class="ts"><span class="ts-name">${esc(z[0])}</span><span class="ts-7m">${m}</span><b class="ts-tore">${z[2]}</b></div>`;}).join(""); };
+  const tsHtml=`<h2>Torschützen</h2><div class="karte"><div class="zwei ts-liste"><div><div class="mini">${esc(s.heim)}</div>${sch("H")}</div><div><div class="mini">${esc(s.gast)}</div>${sch("G")}</div></div>
+    <div class="hinweis" style="margin:8px 0 0">7m = verwandelt/Würfe${ohneWuerfe?" (Würfe bei handball.net-Spielen folgen mit der nächsten Aktualisierung)":""}.</div></div>`;
   if(!ev.some(e=>e.c==="T"||e.c==="7")) return tsHtml;
   const hz=(l.verlauf&&l.verlauf.halbzeit)||30, ende=Math.max(hz*120,...ev.map(e=>e.t));
   let h=0,g=0,maxH=0,maxG=0,wechsel=0,fuehrt=0,hzStand=null; const punkte=[{t:0,h:0,g:0}];

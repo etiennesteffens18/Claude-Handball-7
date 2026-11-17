@@ -406,7 +406,7 @@ def rekorde(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool) -> dic
 def spielverlaeufe(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool) -> dict:
     """Kompakter Verlauf je Spiel für die Spielansicht (wird erst beim Öffnen geladen).
     e: "sek|Code|H/G;…" mit Code T=Tor, 7=7m-Tor, F=7m vergeben, A=Auszeit, Z=2 Min., R=Disq., V=Verwarnung
-    s: Torschützen [[Name, "H"/"G", Tore, 7m-Tore]]"""
+    s: Torschützen [[Name, "H"/"G", Tore, 7m-Tore, 7m-Würfe]]"""
     aus = {}
     for sp in spiele:
         b = cache.get(str(sp["id"]))
@@ -420,12 +420,13 @@ def spielverlaeufe(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool)
                 continue
             art = (e["art"] or "").lower()
             sieben = "siebenmeter" in art or "7m" in art
+            if (e["tor"] or sieben) and e.get("spieler"):
+                z = schuetzen.setdefault(str(e["spieler"]), [anzeigename(e["vor"], e["nach"], jugend, kuerzen), si, 0, 0, 0])
+                z[2] += 1 if e["tor"] else 0
+                z[3] += 1 if e["tor"] and sieben else 0
+                z[4] += 1 if sieben else 0
             if e["tor"]:
                 code = "7" if sieben else "T"
-                if e.get("spieler"):
-                    z = schuetzen.setdefault(str(e["spieler"]), [anzeigename(e["vor"], e["nach"], jugend, kuerzen), si, 0, 0])
-                    z[2] += 1
-                    z[3] += 1 if sieben else 0
             elif sieben:
                 code = "F"
             elif "auszeit" in art or "timeout" in art:
@@ -440,7 +441,7 @@ def spielverlaeufe(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool)
                 continue
             teile.append(f"{e['sek']}|{code}|{si}")
         if teile:
-            aus[str(sp["id"])] = {"e": ";".join(teile), "s": sorted(schuetzen.values(), key=lambda z: -z[2])}
+            aus[str(sp["id"])] = {"e": ";".join(teile), "s": sorted(schuetzen.values(), key=lambda z: (-z[2], -z[3], z[0]))}
     return aus
 
 
