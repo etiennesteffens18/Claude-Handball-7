@@ -143,11 +143,12 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 .tk-art{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--leise)}
 .tk-art.heim{color:var(--akzent)}
 .sprung{position:sticky;top:var(--kopfhoehe,62px);z-index:4;background:var(--bg);margin:0 -14px;padding:10px 14px 8px}
-[id^="st-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
+[id^="st-"],[id^="sp-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
 .reiter button{line-height:1.15;white-space:normal;font-size:13px;padding:6px 4px}
 .karte-g,.karte-r{display:inline-block;min-width:11px;height:14px;border-radius:2px;font-size:10px;line-height:14px;text-align:center;color:#14202f;padding:0 2px}
 .karte-g{background:#f2c200}.karte-r{background:#d63a2f;color:#fff}
 table.spieler td,table.spieler th{padding-left:4px;padding-right:4px}
+table.rek{width:100%}table.rek td{vertical-align:middle}table.rek td.pkt{text-align:right;white-space:nowrap}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -232,11 +233,11 @@ function seiteUebersicht(){
     :`<div class="leer">Noch keine Teams eingetragen – in <code>config/ligen.json</code> unter „meine_teams“.</div>`;
 }
 
-function spielListe(l, liste, sicht, gruppieren){
+function spielListe(l, liste, sicht, gruppieren, praefix){
   if(!liste.length) return `<div class="karte leer">Keine Spiele.</div>`;
   if(!gruppieren) return `<div class="karte">${liste.map(s=>spielZeile(l,s,sicht)).join("")}</div>`;
-  let out="",tag="",karte=[];
-  const flush=()=>{ if(karte.length) out+=`<div class="tag">${esc(tag)}</div><div class="karte">${karte.join("")}</div>`; karte=[]; };
+  let out="",tag="",karte=[],nr=0;
+  const flush=()=>{ if(karte.length) out+=`<div class="tag"${praefix?` id="${praefix}-${nr++}" data-tagnav="${esc(tag)}"`:""}>${esc(tag)}</div><div class="karte">${karte.join("")}</div>`; karte=[]; };
   for (const s of liste){ const t=tagText(s.datum); if(t!==tag){flush();tag=t;} karte.push(spielZeile(l,s,l.meta.meineTeams.find(m=>String(m)===String(s.heimId)||String(m)===String(s.gastId)))); }
   flush(); return out;
 }
@@ -253,8 +254,12 @@ function seiteTeam(){
     const kommend=basis.filter(s=>s.status==="live"||(s.status!=="beendet"&&datum(s.datum)>=heute));
     const vorbei=basis.filter(s=>!kommend.includes(s)).reverse();
     inhalt=`<div class="umschalter"><button data-umfang="team" aria-pressed="${S.umfang!=="liga"}">${esc(teamName(l,id))}</button><button data-umfang="liga" aria-pressed="${S.umfang==="liga"}">Ganze Liga</button></div>
-      <h2>Nächste Spiele</h2>${spielListe(l,kommend,id,S.umfang==="liga")}
-      <h2>Ergebnisse</h2>${spielListe(l,vorbei,id,S.umfang==="liga")}`;
+      <h2 id="sp-naechste">Nächste Spiele</h2>${spielListe(l,kommend,id,S.umfang==="liga","sp-k")}
+      <h2 id="sp-ergebnisse">Ergebnisse</h2>${spielListe(l,vorbei,id,S.umfang==="liga","sp-e")}`;
+    if(S.umfang==="liga"){
+      const tage=[...inhalt.matchAll(/id="(sp-e-\d+)" data-tagnav="([^"]+)"/g)].map(m=>`<button class="chip" data-springe="${m[1]}">${m[2].replace(/^\w+, /,"")}</button>`).join("");
+      inhalt=inhalt.replace('<h2 id="sp-naechste">',`<div class="chips sprung"><button class="chip" data-springe="sp-naechste">Nächste Spiele</button><button class="chip" data-springe="sp-ergebnisse"><b>Ergebnisse</b></button>${tage}</div><h2 id="sp-naechste">`);
+    }
   } else if(S.tab==="gegner") inhalt=seiteGegner(l,id);
   else if(S.tab==="tabelle") inhalt=seiteTabelle();
   else inhalt=seiteStatistik();
@@ -310,7 +315,7 @@ function seiteStatistik(){
   if (fertig.length){
     const hoch=[...fertig].sort((a,b)=>Math.abs(b.hTore-b.gTore)-Math.abs(a.hTore-a.gTore))[0];
     const viel=[...fertig].sort((a,b)=>(b.hTore+b.gTore)-(a.hTore+a.gTore))[0];
-    html+=`<h2 id="st-rek" data-nav="Rekorde">Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`;
+    html+=`<h2 id="st-rek" data-nav="Rekorde">Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`+rekordListen(l);
   }
   html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l)+abschnittZahl(l);
   const nav=[...html.matchAll(/<h2 id="(st-[a-z]+)" data-nav="([^"]+)"/g)].map(m=>`<button class="chip" data-springe="${m[1]}">${m[2]}</button>`).join("");
@@ -347,6 +352,20 @@ function spielBlatt(slug,id){
     ${vergleich.length?`<h2>Direkter Vergleich</h2><div class="karte">${vergleich.map(x=>spielZeile(l,x)).join("")}</div>`:""}
     ${s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
   blatt.showModal();
+}
+
+function rekordListen(l){
+  const r=l.rekorde; if(!r) return "";
+  const sp=id=>l.spiele.find(x=>String(x.id)===String(id));
+  const gegen=(s,tid)=>s?`${String(s.heimId)===String(tid)?"gegen":"bei"} ${esc(String(s.heimId)===String(tid)?s.gast:s.heim)} · ${kurzDatum(s.datum)}`:"";
+  const min=sek=>Math.floor(sek/60)+1;
+  let o="";
+  if(r.spielerTore&&r.spielerTore.length) o+=`<div class="karte"><div class="mini">Meiste Tore in einem Spiel</div><table class="rek"><tbody>${r.spielerTore.map((x,i)=>{const s=sp(x.spielId);
+    return `<tr class="klick${meinTeam(l,x.teamId)?" mein":""}" ${s?`data-spiel="${esc(l.meta.slug)}|${esc(s.id)}"`:""}><td>${i+1}</td><td><b>${esc(x.name)}</b><div class="liga-name">${esc(teamName(l,x.teamId))} ${gegen(s,x.teamId)}</div></td><td class="pkt">${x.tore} Tore</td></tr>`;}).join("")}</tbody></table></div>`;
+  if(r.serien&&r.serien.length) o+=`<div class="karte"><div class="mini">Längste Serie ohne Gegentor</div><table class="rek"><tbody>${r.serien.map((x,i)=>{const s=sp(x.spielId);
+    return `<tr class="klick${meinTeam(l,x.teamId)?" mein":""}" ${s?`data-spiel="${esc(l.meta.slug)}|${esc(s.id)}"`:""}><td>${i+1}</td><td><b>${esc(teamName(l,x.teamId))}</b><div class="liga-name">${gegen(s,x.teamId)} · ${min(x.von)}.–${min(x.bis)}. Min.</div></td><td class="pkt">${x.tore}:0</td></tr>`;}).join("")}</tbody></table>
+    <div class="hinweis" style="margin:6px 0 0">Tore am Stück, ohne dass der Gegner dazwischen trifft (laut Spielbericht).</div></div>`;
+  return o;
 }
 
 // ------------------------------------------------------------- Spieler

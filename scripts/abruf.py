@@ -186,7 +186,8 @@ def liga_handballnet(cfg: dict, cache: dict, kuerzen: bool) -> dict:
     hz = halbzeitlaenge(cache, spiele, cfg.get("halbzeit_minuten"))
     return {"teams": list(teams.values()), "spiele": spiele, "tabelle": tabelle,
             "torschuetzen": torschuetzen, "teamStrafen": strafen,
-            "verlauf": zeit_und_auszeiten(spiele, cache, hz)}
+            "verlauf": zeit_und_auszeiten(spiele, cache, hz),
+            "rekorde": rekorde(spiele, cache, cfg.get("jugend", False), kuerzen)}
 
 
 def tabelle_handballnet(pid: int) -> list[dict]:
@@ -353,6 +354,45 @@ def ueber_unterzahl(spiele: list[dict], cache: dict, hz: int) -> list[dict]:
                 teams[t]["uzTore"] += 1
                 teams[g]["ueGegen"] += 1
     return [{"teamId": k, **v} for k, v in teams.items()]
+
+
+def rekorde(spiele: list[dict], cache: dict, jugend: bool, kuerzen: bool) -> dict:
+    """Meiste Tore eines Spielers in einem Spiel und längste Torserie ohne Gegentor."""
+    spieler, serien = [], []
+    for sp in spiele:
+        bericht = cache.get(str(sp["id"]))
+        if not bericht or sp["status"] != "beendet":
+            continue
+        seiten = {sp["heimId"], sp["gastId"]}
+        im_kader = {str(k["spieler"]) for k in bericht.get("kader") or []}
+        zaehler: dict = {}
+        for e in bericht["ereignisse"]:
+            if e["tor"] and e.get("spieler") and e["team"] in seiten \
+                    and (not im_kader or str(e["spieler"]) in im_kader):
+                z = zaehler.setdefault(str(e["spieler"]), {"name": anzeigename(e["vor"], e["nach"], jugend, kuerzen),
+                                                          "teamId": e["team"], "tore": 0, "spielId": sp["id"]})
+                z["tore"] += 1
+        spieler += zaehler.values()
+        tore_ = sorted((e for e in bericht["ereignisse"] if e["tor"] and e["team"] in seiten
+                        and e.get("sek") is not None), key=lambda e: e["sek"])
+        sek_zahl: dict = {}
+        for e in tore_:
+            sek_zahl[e["sek"]] = sek_zahl.get(e["sek"], 0) + 1
+        if sek_zahl and max(sek_zahl.values()) > 2:   # Bericht ohne echte Spielzeiten
+            continue
+        lauf = None
+        for i, e in enumerate(tore_ + [None]):
+            if e is not None and lauf and e["team"] == lauf["teamId"]:
+                lauf["tore"] += 1
+                lauf["bis"] = e["sek"]
+                continue
+            if lauf and lauf["tore"] >= 3:
+                serien.append(lauf)
+            if e is not None:
+                lauf = {"teamId": e["team"], "tore": 1, "von": e["sek"], "bis": e["sek"], "spielId": sp["id"]}
+    spieler.sort(key=lambda z: -z["tore"])
+    serien.sort(key=lambda z: (-z["tore"], z["bis"] - z["von"]))
+    return {"spielerTore": spieler[:5], "serien": serien[:5]}
 
 
 def bericht_hbnet(sp: dict) -> list[dict] | None:
@@ -532,7 +572,7 @@ def liga_h4a(cfg: dict) -> dict:
             "u": tore(e.get("numEqualGames")) or 0, "n": tore(e.get("numLostGames")) or 0,
             "tore": tore(e.get("numGoalsShot")) or 0, "gegentore": tore(e.get("numGoalsGot")) or 0,
             "diff": (tore(e.get("numGoalsShot")) or 0) - (tore(e.get("numGoalsGot")) or 0),
-            "punkte": tore(e.get("pointsPlus")) or 0,
+            "punkte": tore(e.get("pointsPlus")) or 0, "minus": tore(e.get("pointsMinus")),
         })
     namen_zuordnen(tabelle, spiele)
     cache, kuerzen = H4A_KONTEXT["cache"], H4A_KONTEXT["kuerzen"]
@@ -541,7 +581,8 @@ def liga_h4a(cfg: dict) -> dict:
     hz = halbzeitlaenge(cache, spiele, cfg.get("halbzeit_minuten"))
     return {"teams": list(teams.values()), "spiele": spiele, "tabelle": tabelle,
             "torschuetzen": torschuetzen, "teamStrafen": strafen,
-            "verlauf": zeit_und_auszeiten(spiele, cache, hz)}
+            "verlauf": zeit_und_auszeiten(spiele, cache, hz),
+            "rekorde": rekorde(spiele, cache, cfg.get("jugend", False), kuerzen)}
 
 
 H4A_PDF = "https://spo.handball4all.de/misc/sboPublicReports.php"
