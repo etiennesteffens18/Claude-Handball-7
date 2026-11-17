@@ -713,6 +713,13 @@ def main() -> int:
             print(f"  ABBRUCH: {e!r}", file=sys.stderr)
             fehler += 1
             continue
+        for alt, neu in (liga.get("namen") or {}).items():   # schönere Anzeigenamen
+            for t in daten["teams"]:
+                if t["name"] == alt:
+                    t["name"] = neu
+            for s in daten["spiele"]:
+                s["heim"] = neu if s["heim"] == alt else s["heim"]
+                s["gast"] = neu if s["gast"] == alt else s["gast"]
         tabelle_quelle = "verband"
         if not daten["tabelle"]:
             daten["tabelle"] = tabelle_aus_spielen(daten["spiele"])

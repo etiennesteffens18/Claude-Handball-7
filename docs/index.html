@@ -144,7 +144,7 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 .tk-art.heim{color:var(--akzent)}
 .sprung{position:sticky;top:var(--kopfhoehe,62px);z-index:4;background:var(--bg);margin:0 -14px;padding:10px 14px 8px}
 [id^="st-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
-.reiter button{line-height:1.15}
+.reiter button{line-height:1.15;white-space:normal;font-size:13px;padding:6px 4px}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -446,7 +446,8 @@ function seiteGegner(l,id){
     hin.push(`Kassiert am meisten in <b>${esc(v.labels[ig])} Min.</b> (${plus(dg[ig])}), am wenigsten in ${esc(v.labels[iw])} Min.`); }
   if(B.z){ const ue=zahlWerte(B.z,"ue").d, uz=zahlWerte(B.z,"uz").d, L=l.verlauf.zahl.reduce((a,x)=>({s:a.s+x.uzSek,t:a.t+x.uzTore,g:a.g+x.uzGegen}),{s:0,t:0,g:0});
     const lUz=L.s?(L.t-L.g)/(L.s/120):null;
-    if(uz!=null&&lUz!=null) hin.push(`In Unterzahl ${uz>lUz?"<b>stabiler</b>":"<b>anfälliger</b>"} als der Liga-Schnitt (${plus(uz)} gegen ${plus(lUz)} je 2 Min.) – ${uz>lUz?"eigene Überzahl konsequent ausspielen":"eigene Überzahl ist eine Chance"}.`); }
+    if(uz!=null&&lUz!=null){ const d=uz-lUz;
+      hin.push(Math.abs(d)<0.15?`In Unterzahl etwa im Liga-Schnitt (${plus(uz)} je 2 Min.).`:`In Unterzahl ${d>0?"<b>stabiler</b>":"<b>anfälliger</b>"} als der Liga-Schnitt (${plus(uz)} gegen ${plus(lUz)} je 2 Min.) – ${d>0?"eigene Überzahl konsequent ausspielen":"eigene Überzahl ist eine Chance"}.`); } }
   if(B.st&&B.st.spiele&&A.st&&A.st.spiele) hin.push(`Zeitstrafen: ${f1(B.st.zwei/B.st.spiele)} je Spiel (wir: ${f1(A.st.zwei/A.st.spiele)}).`);
   const duelle=l.spiele.filter(x=>x.status==="beendet"&&x.hTore!=null&&((String(x.heimId)===String(id)&&String(x.gastId)===String(gid))||(String(x.heimId)===String(gid)&&String(x.gastId)===String(id))));
   const letzte=teamSpiele(l,gid).filter(x=>x.status==="beendet"&&x.hTore!=null).slice(-5).reverse();

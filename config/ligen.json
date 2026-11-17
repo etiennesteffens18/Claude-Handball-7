@@ -102,7 +102,10 @@
       "meine_teams": [
         "TSV Neuhausen/F. 1898 2"
       ],
-      "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161141"
+      "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161141",
+      "namen": {
+        "TSV N'hausen/F 2": "TSV Neuhausen/F. 2"
+      }
     }
   ],
   "_beispiele_fuer_spaeter": [
