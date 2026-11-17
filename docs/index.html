@@ -713,7 +713,11 @@ async function lade(){
     $("#stand").textContent="keine Daten";
   }
 }
-if ("serviceWorker" in navigator && !window.EINGEBETTET && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+if ("serviceWorker" in navigator && !window.EINGEBETTET && location.protocol==="https:") {
+  const hatteSW=!!navigator.serviceWorker.controller; let neu=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(hatteSW&&!neu){ neu=true; location.reload(); } });   // neue Version sofort anzeigen
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ document.addEventListener("visibilitychange",()=>{ if(!document.hidden) r.update().catch(()=>{}); }); }).catch(()=>{});
+}
 lade();
 </script>
 </body>
