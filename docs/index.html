@@ -47,7 +47,7 @@ h2:first-child{margin-top:4px}
   border-top:1px solid var(--linie);cursor:pointer}
 .spiel:first-child{border-top:0}
 .spiel .h{text-align:right}.spiel .g{text-align:left}
-.spiel .h,.spiel .g{overflow-wrap:anywhere;hyphens:auto;line-height:1.25}
+.spiel .h,.spiel .g{overflow-wrap:break-word;hyphens:manual;line-height:1.25}
 .spiel .mein{font-weight:800}
 .erg{font-family:var(--mono);font-weight:800;font-size:16px;min-width:74px;text-align:center;
   padding:4px 8px;border-radius:8px;background:var(--bg)}
@@ -146,6 +146,9 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 .sprung{position:sticky;top:var(--kopfhoehe,62px);z-index:4;background:var(--bg);margin:0 -14px;padding:10px 14px 8px}
 [id^="st-"],[id^="sp-"],[id^="hs-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
 .reiter.start{margin:4px 0 14px}
+@keyframes wl{from{opacity:.3;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes wr{from{opacity:.3;transform:translateX(-40px)}to{opacity:1;transform:none}}
+#app.wisch-l{animation:wl .22s ease-out}#app.wisch-r{animation:wr .22s ease-out}
 .reiter button{line-height:1.15;white-space:normal;font-size:13px;padding:6px 4px}
 .karte-g,.karte-r{display:inline-block;min-width:11px;height:14px;border-radius:2px;font-size:10px;line-height:14px;text-align:center;color:#14202f;padding:0 2px}
 .karte-g{background:#f2c200}.karte-r{background:#d63a2f;color:#fff}
@@ -191,7 +194,7 @@ function form(liga,id,n=5){ return teamSpiele(liga,id).map(s=>ausgang(s,id)).fil
 function formHtml(f){ return `<span class="form">${f.map(x=>`<i class="${x}">${x}</i>`).join("")}</span>`; }
 function teamName(liga,id){ const t=liga.teams.find(t=>String(t.id)===String(id)); return t?t.name:String(id); }
 
-const umbruch = t => esc(t).replace(/([\/-])/g,"$1<wbr>");
+const umbruch = t => esc(t).replace(/\//g,"/<wbr>");
 function spielZeile(liga, sp, sichtTeam, zusatz){
   let erg, kl="erg";
   if (sp.status==="beendet" && sp.hTore!=null){ erg=`${sp.hTore}:${sp.gTore}`; const a=sichtTeam!=null?ausgang(sp,sichtTeam):null; if(a) kl+=" "+a; }
@@ -232,18 +235,19 @@ function seiteUebersicht(){
       <div class="tk-zeile"><span class="tk-lab">Nächstes</span>${na?naechstesText(na,id):`<span class="tk-text leise">${l.meta.teildaten?"kommt mit dem ersten Abruf":"keins angesetzt"}</span>`}</div>
     </button>`);
   }
-  const reiter=`<div class="reiter start">${[["teams","Meine Teams"],["heim","Heimspiele"]].map(([k,n])=>`<button data-start="${k}" aria-pressed="${(S.start||"teams")===k}">${n}</button>`).join("")}</div>`;
-  if(S.start==="heim") return reiter+seiteHeimspiele();
+  const start=S.start||"teams";
+  const reiter=`<div class="reiter start">${[["teams","Meine Teams"],["alle","Alle Spiele"]].map(([k,n])=>`<button data-start="${k}" aria-pressed="${k==="teams"?start==="teams":start!=="teams"}">${n}</button>`).join("")}</div>`;
+  if(start!=="teams") return reiter+seiteAlleSpiele();
   return reiter+(karten.length?karten.join("")+`<div class="hinweis" style="text-align:center">Team antippen für alle Spiele, Tabelle und Statistik</div>`
     :`<div class="leer">Noch keine Teams eingetragen – in <code>config/ligen.json</code> unter „meine_teams“.</div>`);
 }
 
 // ------------------------------------------------------------- Heimspiele (eigene Hallen)
 const HALLEN=[["koersch","Körschtalhalle",/körschtalhalle/i],["egelsee","Egelsee-Sporthalle 1",/egelsee/i]];
-function seiteHeimspiele(){
-  const wahl=S.halle||"alle";
+function seiteAlleSpiele(){
+  const wahl=S.start;
   const alle=[];
-  for(const l of S.ligen) for(const sp of l.spiele){ const h=HALLEN.find(x=>x[2].test(sp.halle||"")); if(h&&(wahl==="alle"||wahl===h[0])) alle.push({l,sp,h}); }
+  for(const l of S.ligen) for(const sp of l.spiele){ const h=HALLEN.find(x=>x[2].test(sp.halle||"")); if(wahl==="alle"||(h&&wahl===h[0])) alle.push({l,sp,h}); }
   alle.sort((a,b)=>String(a.sp.datum).localeCompare(String(b.sp.datum)));
   const jetzt=new Date(), heute=new Date(jetzt.getFullYear(),jetzt.getMonth(),jetzt.getDate());
   const vorbei=alle.filter(x=>x.sp.status==="beendet"||(x.sp.datum&&datum(x.sp.datum)<heute)).reverse();
@@ -254,11 +258,11 @@ function seiteHeimspiele(){
     for(const {l,sp,h} of liste){ const t=tagText(sp.datum); if(t!==tag){flush();tag=t;}
       karte.push(spielZeile(l,sp,l.meta.meineTeams.find(m=>String(m)===String(sp.heimId)||String(m)===String(sp.gastId)),l.meta.kurz)); }
     flush(); return out; };
-  let html=`<h2 id="hs-naechste">Nächste Heimspiele</h2>${gruppe(kommend,"hs-k")}<h2 id="hs-ergebnisse">Ergebnisse</h2>${gruppe(vorbei,"hs-e")}`;
+  let html=`<h2 id="hs-naechste">Nächste Spiele</h2>${gruppe(kommend,"hs-k")}<h2 id="hs-ergebnisse">Ergebnisse</h2>${gruppe(vorbei,"hs-e")}`;
   const tage=[...html.matchAll(/id="(hs-k-\d+)" data-tagnav="([^"]+)"/g)].slice(0,8).map(m=>`<button class="chip" data-springe="${m[1]}">${m[2].replace(/^\w+, /,"")}</button>`).join("");
-  return `<div class="chips">${[["alle","Beide Hallen"],["koersch","Körschtalhalle"],["egelsee","Egelsee-Sporthalle 1"]].map(([k,n])=>`<button class="chip" data-halle="${k}" aria-pressed="${wahl===k}">${n}</button>`).join("")}</div>
+  return `<div class="chips">${[["alle","Alle Spiele"],["koersch","Heimspiele Körschtalhalle"],["egelsee","Heimspiele Egelsee-Sporthalle 1"]].map(([k,n])=>`<button class="chip" data-start="${k}" aria-pressed="${wahl===k}">${n}</button>`).join("")}</div>
     <div class="chips sprung"><button class="chip" data-springe="hs-naechste">Nächste</button><button class="chip" data-springe="hs-ergebnisse"><b>Ergebnisse</b></button>${tage}</div>`+html
-    +`<div class="hinweis">Alle Spiele aller Ligen in der App, die in diesen Hallen stattfinden.</div>`;
+    +`<div class="hinweis">${wahl==="alle"?"Alle Spiele aller Ligen in der App.":"Alle Spiele aller Ligen in der App, die in dieser Halle stattfinden."} Wischen nach links/rechts wechselt die Kategorie.</div>`;
 }
 
 function spielListe(l, liste, sicht, gruppieren, praefix){
@@ -600,21 +604,23 @@ function abschnittVerlauf(l){
 
 function abschnittAuszeit(l){
   const v=l.verlauf; if(!v||!v.auszeiten.length) return "";
-  const art=S.auszArt||"eigen", g=art==="gegner"&&v.auszeiten.some(x=>x.gAnzahl!=null);
-  const w=x=>g?{n:x.gAnzahl||0,e:x.gEigen||0,f:x.gGegner||0,t:x.gTore3||0,gg:x.gGegen3||0}
+  const hatG=v.auszeiten.some(x=>x.gAnzahl!=null);
+  const art=hatG?(S.auszArt||"alle"):"eigen", g=art==="gegner";
+  const w=x=>art==="alle"?{n:x.anzahl+(x.gAnzahl||0),e:x.naechstesEigen+(x.gEigen||0),f:x.naechstesGegner+(x.gGegner||0),t:x.tore3+(x.gTore3||0),gg:x.gegen3+(x.gGegen3||0)}
+            :g?{n:x.gAnzahl||0,e:x.gEigen||0,f:x.gGegner||0,t:x.gTore3||0,gg:x.gGegen3||0}
               :{n:x.anzahl,e:x.naechstesEigen,f:x.naechstesGegner,t:x.tore3,gg:x.gegen3};
   const sum=v.auszeiten.map(w).reduce((a,x)=>({n:a.n+x.n,e:a.e+x.e,f:a.f+x.f,t:a.t+x.t,gg:a.gg+x.gg}),{n:0,e:0,f:0,t:0,gg:0});
   const quote=(e,f)=>e+f?e/(e+f):null, pz=q=>q==null?"–":Math.round(100*q)+"%";
   const diff=x=>x.n?((x.t-x.gg)>0?"+":"")+f1((x.t-x.gg)/x.n):"–";
   const ligaQ=quote(sum.e,sum.f);
   const teams=v.auszeiten.map(x=>({x,name:teamName(l,x.teamId),w:w(x)})).map(o=>({...o,q:quote(o.w.e,o.w.f)??-1})).sort((a,b)=>b.q-a.q||b.w.n-a.w.n);
-  const chips=v.auszeiten.some(x=>x.gAnzahl!=null)?`<div class="chips"><button class="chip" data-ausz="eigen" aria-pressed="${!g}">Eigene Auszeit</button><button class="chip" data-ausz="gegner" aria-pressed="${g}">Gegnerische Auszeit</button></div>`:"";
+  const chips=hatG?`<div class="chips"><button class="chip" data-ausz="alle" aria-pressed="${art==="alle"}">Alle Auszeiten</button><button class="chip" data-ausz="eigen" aria-pressed="${art==="eigen"}">Eigene Auszeit</button><button class="chip" data-ausz="gegner" aria-pressed="${g}">Gegnerische Auszeit</button></div>`:"";
   return `<h2 id="st-ausz" data-nav="Auszeit">Torerfolg nach Auszeit</h2>${chips}
-    <div class="karte kz"><div><b>${sum.n}</b><span>${g?"Auszeiten des Gegners":"eigene Auszeiten"}</span></div><div><b>${pz(ligaQ)}</b><span>nächstes Tor eigenes (Liga)</span></div>
+    <div class="karte kz"><div><b>${sum.n}</b><span>${art==="alle"?"Auszeiten (beide Seiten)":g?"Auszeiten des Gegners":"eigene Auszeiten"}</span></div><div><b>${pz(ligaQ)}</b><span>nächstes Tor eigenes (Liga)</span></div>
       <div><b>${diff(sum)}</b><span>Tordiff. 3 Min. danach</span></div></div>
     <div class="karte tabelle-wrap"><table><thead><tr><th></th><th>Team</th><th>Anz.</th><th>Nächstes Tor</th><th>3 Min.</th><th>+/-</th></tr></thead><tbody>
     ${teams.map(({x,name,w:y})=>{const q=quote(y.e,y.f);return `<tr class="${meinTeam(l,x.teamId)?"mein":""}"><td></td><td>${esc(name)}</td><td>${y.n}</td><td>${pz(q)}${q==null?"":`<span class="quote"><b style="width:${100*q}%"></b></span>`}</td><td>${y.t}:${y.gg}</td><td class="pkt">${diff(y)}</td></tr>`;}).join("")}</tbody></table></div>
-    <div class="hinweis">${g?"Gegnerische Auszeit: Der Gegner nimmt die Auszeit – wie reagiert das Team darauf?":"Eigene Auszeit: Das Team nimmt selbst die Auszeit."} „Nächstes Tor“ = Anteil, in dem das Team danach das nächste Tor wirft. „3 Min.“ = eigene Tore : Gegentore in den 3 Minuten danach (gesamt), „+/-“ = Tordifferenz je Auszeit.</div>`;
+    <div class="hinweis">${art==="alle"?"Alle Auszeiten: eigene und gegnerische zusammen – wie oft trifft das Team nach einer Unterbrechung durch eine Auszeit als Nächstes?":g?"Gegnerische Auszeit: Der Gegner nimmt die Auszeit – wie reagiert das Team darauf?":"Eigene Auszeit: Das Team nimmt selbst die Auszeit."} „Nächstes Tor“ = Anteil, in dem das Team danach das nächste Tor wirft. „3 Min.“ = eigene Tore : Gegentore in den 3 Minuten danach (gesamt), „+/-“ = Tordifferenz je Auszeit.</div>`;
 }
 
 // Tooltip für Diagramme – Maus und Antippen
@@ -630,6 +636,22 @@ addEventListener("scroll",versteckeTip,{passive:true});
 document.addEventListener("change",e=>{ const w=e.target.closest("[data-spielerwahl]"); if(w){ S.spielerTeam={...(S.spielerTeam||{}),[w.dataset.spielerwahl]:w.value}; zeichne(); document.getElementById("st-tors")?.scrollIntoView({block:"start"}); return; } const s=e.target.closest("[data-verlaufwahl]"); if(s){ S.verlaufTeam={...(S.verlaufTeam||{}),[s.dataset.verlaufwahl]:s.value}; zeichne(); } });
 
 // ------------------------------------------------------------- Ablauf
+// Wischen links/rechts wechselt die Kategorie
+(function(){
+  let x0=null,y0=null,t0=0;
+  document.addEventListener("touchstart",e=>{
+    if(e.touches.length!==1||e.target.closest(".chips,.tabelle-wrap,.diagramm,svg,select,input,#blatt,.blatt")){x0=null;return;}
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY;t0=Date.now();},{passive:true});
+  document.addEventListener("touchend",e=>{
+    if(x0==null) return; const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
+    if(Math.abs(dx)<60||Math.abs(dx)<1.6*Math.abs(dy)||Date.now()-t0>800) return;
+    const r=dx<0?1:-1;
+    if(S.team){ const tabs=["spiele","tabelle","statistik","gegner"]; const i=tabs.indexOf(S.tab)+r; if(i<0||i>=tabs.length) return; S.tab=tabs[i]; }
+    else { const k=["teams","alle","koersch","egelsee"]; const i=k.indexOf(S.start||"teams")+r; if(i<0||i>=k.length) return; S.start=k[i]; }
+    zeichne(); scrollTo(0,0);
+    const a=$("#app"); a.classList.remove("wisch-l","wisch-r"); void a.offsetWidth; a.classList.add(r>0?"wisch-l":"wisch-r");
+  },{passive:true});
+})();
 function zeichne(){ document.documentElement.style.setProperty("--kopfhoehe",document.querySelector("header").offsetHeight+"px"); $("#app").innerHTML=S.team?seiteTeam():seiteUebersicht(); }
 function oeffneTeam(slug,id){ S.team={slug,id}; S.tab="spiele"; S.umfang="team"; zeichne(); scrollTo(0,0);
   try{ history.pushState({team:true},""); }catch(e){} }
@@ -641,7 +663,6 @@ document.addEventListener("click",e=>{
   const tb=e.target.closest("[data-tab]"); if(tb){S.tab=tb.dataset.tab;zeichne();return;}
   const um=e.target.closest("[data-umfang]"); if(um){S.umfang=um.dataset.umfang;zeichne();return;}
   const sp=e.target.closest("[data-springe]"); if(sp){document.getElementById(sp.dataset.springe)?.scrollIntoView({behavior:"smooth",block:"start"});return;}
-  const ha=e.target.closest("[data-halle]"); if(ha){S.halle=ha.dataset.halle;zeichne();return;}
   const au=e.target.closest("[data-ausz]"); if(au){S.auszArt=au.dataset.ausz;zeichne();return;}
   const st=e.target.closest("[data-start]"); if(st){S.start=st.dataset.start;zeichne();scrollTo(0,0);return;}
   const za=e.target.closest("[data-zahl]"); if(za){S.zahlArt=za.dataset.zahl;zeichne();return;}
