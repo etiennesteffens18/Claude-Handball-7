@@ -145,6 +145,9 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 .sprung{position:sticky;top:var(--kopfhoehe,62px);z-index:4;background:var(--bg);margin:0 -14px;padding:10px 14px 8px}
 [id^="st-"]{scroll-margin-top:calc(var(--kopfhoehe,62px) + 54px)}
 .reiter button{line-height:1.15;white-space:normal;font-size:13px;padding:6px 4px}
+.karte-g,.karte-r{display:inline-block;min-width:11px;height:14px;border-radius:2px;font-size:10px;line-height:14px;text-align:center;color:#14202f;padding:0 2px}
+.karte-g{background:#f2c200}.karte-r{background:#d63a2f;color:#fff}
+table.spieler td,table.spieler th{padding-left:4px;padding-right:4px}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -295,16 +298,7 @@ function seiteStatistik(){
     <div><b>${fertig.length?f1(toreGesamt/fertig.length):"–"}</b><span>Tore/Spiel</span></div>
     <div><b>${fertig.length?Math.round(100*heimSiege/fertig.length)+"%":"–"}</b><span>Heimsiege</span></div></div>`;
 
-  const ts=l.torschuetzen.filter(p=>p.tore>0).slice(0,25);
-  html+=`<h2 id="st-tors" data-nav="Torschützen">Torschützen</h2>`;
-  if (ts.length){
-    const max=ts[0].tore;
-    html+=`<div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Spieler</th><th>Sp</th><th>Tore</th><th>Ø</th><th>7m</th><th>2'</th></tr></thead><tbody>`+
-      ts.map((p,i)=>`<tr class="${meinTeam(l,p.teamId)?"mein":""}"><td>${i+1}</td><td>${esc(p.name)}<div class="liga-name">${esc(teamName(l,p.teamId))}</div><div class="balken"><div style="width:${100*p.tore/max}%"></div></div></td>
-        <td>${p.spiele}</td><td class="pkt">${p.tore}</td><td>${p.spiele?f1(p.tore/p.spiele):"–"}</td>
-        <td>${p.siebenWuerfe?`${p.siebenTore}/${p.siebenWuerfe}`:"–"}</td><td>${p.zwei||"–"}</td></tr>`).join("")+`</tbody></table></div>`;
-  } else html+=`<div class="karte leer">${l.meta.quelle==="h4a"?"Erscheint, sobald Spielberichte (PDF) ausgelesen wurden.":"Erscheint, sobald Spielberichte abgerufen wurden."}</div>`;
-
+  html+=abschnittSpieler(l);
   html+=abschnittSieben(l);
   const teams=l.tabelle.map(t=>({t,w:teamWerte(l,t.teamId),st:l.teamStrafen.find(x=>String(x.teamId)===String(t.teamId))}));
   html+=`<h2 id="st-team" data-nav="Teamwerte">Teamwerte</h2><div class="karte tabelle-wrap"><table><thead><tr><th>#</th><th>Team</th><th>Tore Ø</th><th>Gegen Ø</th><th>Heim</th><th>Ausw.</th><th>2' Ø</th></tr></thead><tbody>`+
@@ -353,6 +347,26 @@ function spielBlatt(slug,id){
     ${vergleich.length?`<h2>Direkter Vergleich</h2><div class="karte">${vergleich.map(x=>spielZeile(l,x)).join("")}</div>`:""}
     ${s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
   blatt.showModal();
+}
+
+// ------------------------------------------------------------- Spieler
+function abschnittSpieler(l){
+  const alle=l.torschuetzen||[];
+  const kopf=`<h2 id="st-tors" data-nav="Spieler">Spieler &amp; Torschützen</h2>`;
+  if(!alle.length) return kopf+`<div class="karte leer">${l.meta.quelle==="h4a"?"Erscheint, sobald Spielberichte (PDF) ausgelesen wurden.":"Erscheint, sobald Spielberichte abgerufen wurden."}</div>`;
+  const teams=l.tabelle.map(t=>({id:String(t.teamId),name:teamName(l,t.teamId)})).sort((a,b)=>a.name.localeCompare(b.name));
+  const vor=S.team&&l.meta.slug===S.team.slug?String(S.team.id):"liga";
+  const wahl=(S.spielerTeam||{})[l.meta.slug]??vor;
+  const liste=wahl==="liga"?alle.filter(p=>p.tore>0).slice(0,25)
+    :alle.filter(p=>String(p.teamId)===wahl).sort((a,b)=>b.tore-a.tore||b.spiele-a.spiele||a.name.localeCompare(b.name));
+  const max=Math.max(1,...liste.map(p=>p.tore));
+  const karte=(n,kl)=>n?`<span class="karte-${kl}">${n}</span>`:"–";
+  return kopf+`<select data-spielerwahl="${esc(l.meta.slug)}"><option value="liga"${wahl==="liga"?" selected":""}>Beste Torschützen der Liga</option>${teams.map(t=>`<option value="${esc(t.id)}"${t.id===wahl?" selected":""}>${esc(t.name)}</option>`).join("")}</select>
+    <div class="karte tabelle-wrap"><table class="spieler"><thead><tr><th>#</th><th>Spieler</th><th>Sp</th><th>Tore</th><th>Ø</th><th>7m</th><th>2'</th><th><span class="karte-g" title="Gelbe Karten">&nbsp;</span></th><th><span class="karte-r" title="Rote Karten">&nbsp;</span></th></tr></thead><tbody>`+
+    (liste.map((p,i)=>`<tr class="${wahl==="liga"&&meinTeam(l,p.teamId)?"mein":""}"><td>${i+1}</td><td>${esc(p.name)}${wahl==="liga"?`<div class="liga-name">${esc(teamName(l,p.teamId))}</div>`:""}<div class="balken"><div style="width:${100*p.tore/max}%"></div></div></td>
+      <td>${p.spiele}</td><td class="pkt">${p.tore}</td><td>${p.spiele?f1(p.tore/p.spiele):"–"}</td>
+      <td>${p.siebenWuerfe?`${p.siebenTore}/${p.siebenWuerfe}`:"–"}</td><td>${p.zwei||"–"}</td><td>${karte(p.gelb,"g")}</td><td>${karte(p.rot,"r")}</td></tr>`).join("")||`<tr><td colspan="9" class="leer">Keine Spieler.</td></tr>`)+`</tbody></table></div>
+    <div class="hinweis">Sp = Spiele auf dem Spielbericht · Ø = Tore je Spiel · 7m = Tore/Würfe · 2' = Zeitstrafen · gelb/rot = Karten.${wahl==="liga"?" Team oben wählen, um alle Spieler eines Teams zu sehen.":""}</div>`;
 }
 
 // ------------------------------------------------------------- 7-Meter
@@ -563,7 +577,7 @@ document.addEventListener("pointerover",e=>{ const t=e.target.closest("[data-tip
 document.addEventListener("pointermove",e=>{ if(tipZiel&&e.pointerType==="mouse"){ const t=e.target.closest("[data-tip]"); if(t) zeigeTip(t,e.clientX,e.clientY); else versteckeTip(); } });
 document.addEventListener("pointerdown",e=>{ const t=e.target.closest("[data-tip]"); if(t&&e.pointerType!=="mouse") zeigeTip(t,e.clientX,e.clientY); else if(!t) versteckeTip(); });
 addEventListener("scroll",versteckeTip,{passive:true});
-document.addEventListener("change",e=>{ const s=e.target.closest("[data-verlaufwahl]"); if(s){ S.verlaufTeam={...(S.verlaufTeam||{}),[s.dataset.verlaufwahl]:s.value}; zeichne(); } });
+document.addEventListener("change",e=>{ const w=e.target.closest("[data-spielerwahl]"); if(w){ S.spielerTeam={...(S.spielerTeam||{}),[w.dataset.spielerwahl]:w.value}; zeichne(); document.getElementById("st-tors")?.scrollIntoView({block:"start"}); return; } const s=e.target.closest("[data-verlaufwahl]"); if(s){ S.verlaufTeam={...(S.verlaufTeam||{}),[s.dataset.verlaufwahl]:s.value}; zeichne(); } });
 
 // ------------------------------------------------------------- Ablauf
 function zeichne(){ document.documentElement.style.setProperty("--kopfhoehe",document.querySelector("header").offsetHeight+"px"); $("#app").innerHTML=S.team?seiteTeam():seiteUebersicht(); }

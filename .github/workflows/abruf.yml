@@ -8,7 +8,7 @@ on:
   workflow_dispatch: {}        # "Run workflow"-Knopf zum manuellen Starten
   push:                        # neue Liga eingetragen → sofort abrufen
     branches: [main]
-    paths: [config/ligen.json]
+    paths: [config/ligen.json, scripts/abruf.py]
 
 permissions:
   contents: write

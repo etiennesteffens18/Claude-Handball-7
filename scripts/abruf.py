@@ -37,7 +37,7 @@ H4A = "https://spo.handball4all.de/service/if_g_json.php"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36 handball-app/1.0 (privat)")
 PAUSE = 0.5            # Rücksicht auf die Quelle
-MAX_BERICHTE = 60      # höchstens so viele neue Spielberichte je Lauf
+MAX_BERICHTE = 120     # höchstens so viele neue Spielberichte je Lauf
 
 STATUS = {             # handball.net liefert den Status auf Spanisch (iSquad-Backend)
     "Pendiente": "geplant", "Finalizado": "beendet", "En juego": "live",
@@ -383,7 +383,8 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
         if sp["status"] not in ("beendet", "live") or not sp["id"]:
             continue
         key = str(sp["id"])
-        if key in cache and cache[key].get("v") == CACHE_VERSION and not cache[key].get("vorlaeufig"):
+        if key in cache and cache[key].get("v") == CACHE_VERSION and not cache[key].get("vorlaeufig") \
+                and ("kader" in cache[key] or holer is bericht_hbnet):
             continue
         if neu >= MAX_BERICHTE:
             break
@@ -391,12 +392,15 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
         ereignisse = holer(sp)
         if ereignisse is None:
             continue
+        kader = []
+        if isinstance(ereignisse, dict):
+            ereignisse, kader = ereignisse["ereignisse"], ereignisse["kader"]
         if jugend and kuerzen:   # Repo ist öffentlich: Jugendnamen schon im Cache kürzen
-            for e in ereignisse:
+            for e in ereignisse + kader:
                 if e.get("spieler"):
                     e["spieler"] = hashlib.sha1(str(e["spieler"]).encode()).hexdigest()[:12]
                     e["nach"] = (e.get("nach") or "")[:1]
-        cache[key] = {"v": CACHE_VERSION, "ereignisse": ereignisse,
+        cache[key] = {"v": CACHE_VERSION, "ereignisse": ereignisse, "kader": kader,
                       "vorlaeufig": sp["status"] == "live"}
 
     spieler: dict[str, dict] = {}
@@ -406,6 +410,14 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
         if not bericht:
             continue
         in_spiel = set()
+        for k in bericht.get("kader") or []:          # alle Spieler auf dem Bericht
+            pid = str(k["spieler"])
+            p = spieler.setdefault(pid, {
+                "name": anzeigename(k["vor"], k["nach"], jugend, kuerzen), "teamId": k["team"],
+                "tore": 0, "siebenTore": 0, "siebenWuerfe": 0, "zwei": 0, "gelb": 0, "rot": 0, "spiele": 0})
+            if (sp["id"], pid) not in in_spiel:
+                in_spiel.add((sp["id"], pid))
+                p["spiele"] += 1
         for e in bericht["ereignisse"]:
             art = e["art"].lower()
             if e["team"] and not e["tor"]:
@@ -422,7 +434,7 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
             pid = str(e["spieler"])
             p = spieler.setdefault(pid, {
                 "name": anzeigename(e["vor"], e["nach"], jugend, kuerzen), "teamId": e["team"],
-                "tore": 0, "siebenTore": 0, "siebenWuerfe": 0, "zwei": 0, "spiele": 0})
+                "tore": 0, "siebenTore": 0, "siebenWuerfe": 0, "zwei": 0, "gelb": 0, "rot": 0, "spiele": 0})
             if (sp["id"], pid) not in in_spiel:
                 in_spiel.add((sp["id"], pid))
                 p["spiele"] += 1
@@ -436,8 +448,12 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
                 p["siebenWuerfe"] += 1
             elif "zwei" in art or "2 min" in art or "zeitstrafe" in art:
                 p["zwei"] += 1
+            elif "verwarnung" in art or "gelb" in art:
+                p["gelb"] += 1
+            elif "disqualifikation" in art or "rot" in art:
+                p["rot"] += 1
 
-    liste = sorted((p for p in spieler.values() if p["tore"] > 0 or p["zwei"] > 0),
+    liste = sorted((p for p in spieler.values() if p["spiele"] > 0),
                    key=lambda p: (-p["tore"], p["name"]))
     return liste, [{"teamId": t, "zwei": v["zwei"], "gelb": v["gelb"], "rot": v["rot"],
                     "spiele": len(v["spiele"])} for t, v in strafen.items()]
@@ -522,6 +538,7 @@ H4A_KONTEXT: dict = {"cache": {}, "kuerzen": True}
 
 _ZEILE = re.compile(r"^\s*(\d{1,2}:\d{2}:\d{2})\s+(\d{1,3}):(\d{2})\s+(?:(\d+):(\d+)\s+)?(.+?)\s*$")
 _PERSON = re.compile(r"^(?P<aktion>.+?)\s+(?:durch|für)\s+(?P<name>.+?)\s*\((?P<nr>\w+),\s*(?P<team>.+)\)$")
+_KADER = re.compile(r"^(\d{1,3}) ([^\d/:]+?)(?: (?:19|20)\d{2})?(?: \d{1,2})?(?: \d+/\d+)?(?: \d{1,2}:\d{2})*\s*$")
 _ARTEN = [  # (Anfang des Aktionstexts, Name wie bei handball.net, ist Tor)
     ("7m-tor", "Siebenmeter Tor", True), ("7m, kein tor", "Siebenmeter Fehlwurf", False),
     ("tor", "Tor", True), ("2-min", "Zwei Minuten", False), ("verwarnung", "Verwarnung", False),
@@ -590,6 +607,24 @@ def bericht_h4a(sp: dict) -> list[dict] | None:
     if gast_lang:
         teams[gast_lang] = sp["gastId"]
 
+    kader, seite = [], None
+    for z in zeilen:
+        if z.startswith("Heim:"):
+            seite = sp["heimId"]; continue
+        if z.startswith("Gast:"):
+            seite = sp["gastId"]; continue
+        if seite is None:
+            continue
+        if z.startswith("Handball4all") or z.startswith("Spielverlauf") or re.match(r"^[A-E](\s|$)", z):
+            if z.startswith("Handball4all") or z.startswith("Spielverlauf") or (z.startswith("E") and seite == sp["gastId"]):
+                seite = None if seite == sp["gastId"] else seite
+            continue
+        k = _KADER.match(z)
+        if k:
+            teile = k.group(2).split()
+            kader.append({"spieler": f"{seite}#{k.group(1)}#{k.group(2)}", "team": seite,
+                          "vor": " ".join(teile[:-1]), "nach": teile[-1] if teile else ""})
+
     ereignisse = []
     for z in zeilen:
         m = _ZEILE.match(z)
@@ -626,7 +661,7 @@ def bericht_h4a(sp: dict) -> list[dict] | None:
         e["abschnitt"] = "1. Halbzeit" if e["sek"] <= hz * 60 else "2. Halbzeit"
     ereignisse.append({"art": "Teilende", "tor": False, "team": None, "spieler": None,
                        "vor": "", "nach": "", "sek": hz * 60, "abschnitt": "1. Halbzeit"})
-    return ereignisse
+    return {"ereignisse": ereignisse, "kader": kader}
 
 
 def namen_zuordnen(tabelle: list[dict], spiele: list[dict]) -> None:
