@@ -6,6 +6,9 @@ on:
     - cron: "17 8-22 * * 6,0"
     - cron: "17 6,18 * * 1-5"
   workflow_dispatch: {}        # "Run workflow"-Knopf zum manuellen Starten
+  push:                        # neue Liga eingetragen → sofort abrufen
+    branches: [main]
+    paths: [config/ligen.json]
 
 permissions:
   contents: write

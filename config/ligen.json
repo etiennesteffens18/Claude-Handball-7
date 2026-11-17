@@ -77,6 +77,32 @@
         "JANO Filder"
       ],
       "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161316"
+    },
+    {
+      "slug": "m-rl-bw",
+      "name": "Männer-Regionalliga BW",
+      "kurz": "Regionalliga BW",
+      "quelle": "h4a",
+      "org_id": 216,
+      "class_id": 161126,
+      "jugend": false,
+      "meine_teams": [
+        "HSG Ostfildern"
+      ],
+      "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161126"
+    },
+    {
+      "slug": "m-vl1-bw",
+      "name": "Männer-Verbandsliga Staffel 1",
+      "kurz": "Verbandsliga 1",
+      "quelle": "h4a",
+      "org_id": 216,
+      "class_id": 161141,
+      "jugend": false,
+      "meine_teams": [
+        "TSV Neuhausen/F. 1898 2"
+      ],
+      "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161141"
     }
   ],
   "_beispiele_fuer_spaeter": [
