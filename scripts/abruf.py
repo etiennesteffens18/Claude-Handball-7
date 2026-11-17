@@ -410,6 +410,7 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
         if not bericht:
             continue
         in_spiel = set()
+        im_kader = {str(k["spieler"]) for k in bericht.get("kader") or []}
         for k in bericht.get("kader") or []:          # alle Spieler auf dem Bericht
             pid = str(k["spieler"])
             p = spieler.setdefault(pid, {
@@ -432,6 +433,8 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
             if not e["spieler"]:
                 continue
             pid = str(e["spieler"])
+            if im_kader and pid not in im_kader:      # Offizielle (A–E) sind keine Spieler
+                continue
             p = spieler.setdefault(pid, {
                 "name": anzeigename(e["vor"], e["nach"], jugend, kuerzen), "teamId": e["team"],
                 "tore": 0, "siebenTore": 0, "siebenWuerfe": 0, "zwei": 0, "gelb": 0, "rot": 0, "spiele": 0})
@@ -453,7 +456,15 @@ def berichte_auswerten(spiele: list[dict], cache: dict, jugend: bool, kuerzen: b
             elif "disqualifikation" in art or "rot" in art:
                 p["rot"] += 1
 
-    liste = sorted((p for p in spieler.values() if p["spiele"] > 0),
+    zusammen: dict = {}                          # gleiche Person mit anderer Rückennummer
+    for p in spieler.values():
+        k = (str(p["teamId"]), p["name"])
+        if k in zusammen:
+            for f in ("tore", "siebenTore", "siebenWuerfe", "zwei", "gelb", "rot", "spiele"):
+                zusammen[k][f] += p[f]
+        else:
+            zusammen[k] = dict(p)
+    liste = sorted((p for p in zusammen.values() if p["spiele"] > 0),
                    key=lambda p: (-p["tore"], p["name"]))
     return liste, [{"teamId": t, "zwei": v["zwei"], "gelb": v["gelb"], "rot": v["rot"],
                     "spiele": len(v["spiele"])} for t, v in strafen.items()]

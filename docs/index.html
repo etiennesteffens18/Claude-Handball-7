@@ -366,7 +366,7 @@ function abschnittSpieler(l){
     (liste.map((p,i)=>`<tr class="${wahl==="liga"&&meinTeam(l,p.teamId)?"mein":""}"><td>${i+1}</td><td>${esc(p.name)}${wahl==="liga"?`<div class="liga-name">${esc(teamName(l,p.teamId))}</div>`:""}<div class="balken"><div style="width:${100*p.tore/max}%"></div></div></td>
       <td>${p.spiele}</td><td class="pkt">${p.tore}</td><td>${p.spiele?f1(p.tore/p.spiele):"–"}</td>
       <td>${p.siebenWuerfe?`${p.siebenTore}/${p.siebenWuerfe}`:"–"}</td><td>${p.zwei||"–"}</td><td>${karte(p.gelb,"g")}</td><td>${karte(p.rot,"r")}</td></tr>`).join("")||`<tr><td colspan="9" class="leer">Keine Spieler.</td></tr>`)+`</tbody></table></div>
-    <div class="hinweis">Sp = Spiele auf dem Spielbericht · Ø = Tore je Spiel · 7m = Tore/Würfe · 2' = Zeitstrafen · gelb/rot = Karten.${wahl==="liga"?" Team oben wählen, um alle Spieler eines Teams zu sehen.":""}</div>`;
+    <div class="hinweis">Sp = Spiele auf dem Spielbericht · Ø = Tore je Spiel · 7m = Tore/Würfe · 2' = Zeitstrafen · gelb = Verwarnung · rot = Disqualifikation (auch nach der 3. Zeitstrafe).${wahl==="liga"?" Team oben wählen, um alle Spieler eines Teams zu sehen.":""}</div>`;
 }
 
 // ------------------------------------------------------------- 7-Meter
