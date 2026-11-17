@@ -283,15 +283,22 @@ def zeit_und_auszeiten(spiele: list[dict], cache: dict, hz: int) -> dict:
             if a["art"] != "Auszeit" or a["team"] not in seiten:
                 continue
             nach = [e for e in tore_ if e["sek"] >= a["sek"]]
-            st = auszeiten.setdefault(a["team"], {"anzahl": 0, "naechstesEigen": 0, "naechstesGegner": 0,
-                                                  "tore3": 0, "gegen3": 0})
+            leer = lambda: {"anzahl": 0, "naechstesEigen": 0, "naechstesGegner": 0, "tore3": 0, "gegen3": 0,
+                            "gAnzahl": 0, "gEigen": 0, "gGegner": 0, "gTore3": 0, "gGegen3": 0}
+            st = auszeiten.setdefault(a["team"], leer())
+            go = auszeiten.setdefault(seiten[a["team"]], leer())   # Sicht des Gegners: „gegnerische Auszeit“
             st["anzahl"] += 1
+            go["gAnzahl"] += 1
             if nach:
-                st["naechstesEigen" if nach[0]["team"] == a["team"] else "naechstesGegner"] += 1
+                eigen = nach[0]["team"] == a["team"]
+                st["naechstesEigen" if eigen else "naechstesGegner"] += 1
+                go["gGegner" if eigen else "gEigen"] += 1
             for e in nach:
                 if e["sek"] - a["sek"] > 180:
                     break
-                st["tore3" if e["team"] == a["team"] else "gegen3"] += 1
+                eigen = e["team"] == a["team"]
+                st["tore3" if eigen else "gegen3"] += 1
+                go["gGegen3" if eigen else "gTore3"] += 1
     spiele_ges = sum(t["spiele"] for t in teams.values())
     liga = [round(sum(t["tore"][i] for t in teams.values()) / spiele_ges, 2) if spiele_ges else 0
             for i in range(N)]
