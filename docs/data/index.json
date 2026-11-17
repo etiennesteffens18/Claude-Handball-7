@@ -1,5 +1,5 @@
 {
- "aktualisiert": "2026-11-16T19:03:51+00:00",
+ "aktualisiert": "2026-11-17T00:10:06+00:00",
  "saison": "2026/27",
  "ligen": [
   {
@@ -12,7 +12,7 @@
    "meineTeams": [
     87031
    ],
-   "aktualisiert": "2026-11-16T23:20:22+00:00",
+   "aktualisiert": "2026-11-16T23:37:27+00:00",
    "tabelleQuelle": "verband",
    "abrufFehler": false,
    "manuell": true,
@@ -28,7 +28,7 @@
    "meineTeams": [
     87032
    ],
-   "aktualisiert": "2026-11-16T23:20:22+00:00",
+   "aktualisiert": "2026-11-16T23:37:27+00:00",
    "tabelleQuelle": "verband",
    "abrufFehler": false,
    "manuell": true,
@@ -44,7 +44,7 @@
    "meineTeams": [
     87352
    ],
-   "aktualisiert": "2026-11-16T23:20:22+00:00",
+   "aktualisiert": "2026-11-16T23:37:27+00:00",
    "tabelleQuelle": "verband",
    "abrufFehler": false,
    "manuell": true,
@@ -60,7 +60,7 @@
    "meineTeams": [
     "JANO Filder 2"
    ],
-   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "aktualisiert": "2026-11-17T00:10:06+00:00",
    "abrufFehler": false,
    "tabelleQuelle": "verband"
   },
@@ -74,7 +74,7 @@
    "meineTeams": [
     "JANO Filder 2"
    ],
-   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "aktualisiert": "2026-11-17T00:10:06+00:00",
    "abrufFehler": false,
    "tabelleQuelle": "verband"
   },
@@ -88,7 +88,35 @@
    "meineTeams": [
     "JANO Filder"
    ],
-   "aktualisiert": "2026-11-16T19:03:51+00:00",
+   "aktualisiert": "2026-11-17T00:10:06+00:00",
+   "abrufFehler": false,
+   "tabelleQuelle": "verband"
+  },
+  {
+   "slug": "m-rl-bw",
+   "name": "Männer-Regionalliga BW",
+   "kurz": "Regionalliga BW",
+   "quelle": "h4a",
+   "jugend": false,
+   "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161126",
+   "meineTeams": [
+    "HSG Ostfildern"
+   ],
+   "aktualisiert": "2026-11-17T00:10:06+00:00",
+   "abrufFehler": false,
+   "tabelleQuelle": "verband"
+  },
+  {
+   "slug": "m-vl1-bw",
+   "name": "Männer-Verbandsliga Staffel 1",
+   "kurz": "Verbandsliga 1",
+   "quelle": "h4a",
+   "jugend": false,
+   "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161141",
+   "meineTeams": [
+    "TSV N'hausen/F 2"
+   ],
+   "aktualisiert": "2026-11-17T00:10:06+00:00",
    "abrufFehler": false,
    "tabelleQuelle": "verband"
   }
