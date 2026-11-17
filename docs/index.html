@@ -366,7 +366,7 @@ function seiteTeam(){
     inhalt=`<div class="umschalter"><button data-umfang="team" aria-pressed="${S.umfang!=="liga"}">${esc(teamName(l,id))}</button><button data-umfang="liga" aria-pressed="${S.umfang==="liga"}">Ganze Liga</button></div>
       <h2 id="sp-naechste">Nächste Spiele</h2>${spielListe(l,kommend,id,S.umfang==="liga","sp-k")}
       <h2 id="sp-ergebnisse">Ergebnisse</h2>${spielListe(l,vorbei,id,S.umfang==="liga","sp-e")}`;
-    if(S.umfang==="liga"){
+    {
       const tage=[...inhalt.matchAll(/id="(sp-e-\d+)" data-tagnav="([^"]+)"/g)].map(m=>`<button class="chip" data-springe="${m[1]}">${m[2].replace(/^\w+, /,"")}</button>`).join("");
       inhalt=inhalt.replace('<h2 id="sp-naechste">',`<div class="chips sprung"><button class="chip" data-springe="sp-naechste">Nächste Spiele</button><button class="chip" data-springe="sp-ergebnisse"><b>Ergebnisse</b></button>${tage}</div><h2 id="sp-naechste">`);
     }
