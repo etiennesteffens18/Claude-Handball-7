@@ -148,6 +148,7 @@ svg.diag .treffer:hover,svg.diag .treffer.an{fill:var(--tinte);fill-opacity:.05}
 .reiter.start{margin:4px 0 14px}
 @keyframes wl{from{opacity:.3;transform:translateX(40px)}to{opacity:1;transform:none}}
 @keyframes wr{from{opacity:.3;transform:translateX(-40px)}to{opacity:1;transform:none}}
+body{touch-action:pan-y pinch-zoom}
 #app.wisch-l{animation:wl .22s ease-out}#app.wisch-r{animation:wr .22s ease-out}
 .reiter button{line-height:1.15;white-space:normal;font-size:13px;padding:6px 4px}
 .karte-g,.karte-r{display:inline-block;min-width:11px;height:14px;border-radius:2px;font-size:10px;line-height:14px;text-align:center;color:#14202f;padding:0 2px}
@@ -247,7 +248,8 @@ const HALLEN=[["koersch","Körschtalhalle",/körschtalhalle/i],["egelsee","Egels
 function seiteAlleSpiele(){
   const wahl=S.start;
   const alle=[];
-  for(const l of S.ligen) for(const sp of l.spiele){ const h=HALLEN.find(x=>x[2].test(sp.halle||"")); if(wahl==="alle"||(h&&wahl===h[0])) alle.push({l,sp,h}); }
+  for(const l of S.ligen) for(const sp of l.spiele){ const h=HALLEN.find(x=>x[2].test(sp.halle||"")); const mein=l.meta.meineTeams.some(m=>String(m)===String(sp.heimId)||String(m)===String(sp.gastId));
+    if((wahl==="alle"&&mein)||(h&&wahl===h[0])) alle.push({l,sp,h}); }
   alle.sort((a,b)=>String(a.sp.datum).localeCompare(String(b.sp.datum)));
   const jetzt=new Date(), heute=new Date(jetzt.getFullYear(),jetzt.getMonth(),jetzt.getDate());
   const vorbei=alle.filter(x=>x.sp.status==="beendet"||(x.sp.datum&&datum(x.sp.datum)<heute)).reverse();
@@ -262,7 +264,7 @@ function seiteAlleSpiele(){
   const tage=[...html.matchAll(/id="(hs-k-\d+)" data-tagnav="([^"]+)"/g)].slice(0,8).map(m=>`<button class="chip" data-springe="${m[1]}">${m[2].replace(/^\w+, /,"")}</button>`).join("");
   return `<div class="chips">${[["alle","Alle Spiele"],["koersch","Heimspiele Körschtalhalle"],["egelsee","Heimspiele Egelsee-Sporthalle 1"]].map(([k,n])=>`<button class="chip" data-start="${k}" aria-pressed="${wahl===k}">${n}</button>`).join("")}</div>
     <div class="chips sprung"><button class="chip" data-springe="hs-naechste">Nächste</button><button class="chip" data-springe="hs-ergebnisse"><b>Ergebnisse</b></button>${tage}</div>`+html
-    +`<div class="hinweis">${wahl==="alle"?"Alle Spiele aller Ligen in der App.":"Alle Spiele aller Ligen in der App, die in dieser Halle stattfinden."} Wischen nach links/rechts wechselt die Kategorie.</div>`;
+    +`<div class="hinweis">${wahl==="alle"?"Alle Heim- und Auswärtsspiele deiner Teams.":"Alle Spiele aller Ligen in der App, die in dieser Halle stattfinden."} Wischen nach links/rechts wechselt die Kategorie.</div>`;
 }
 
 function spielListe(l, liste, sicht, gruppieren, praefix){
@@ -636,21 +638,28 @@ addEventListener("scroll",versteckeTip,{passive:true});
 document.addEventListener("change",e=>{ const w=e.target.closest("[data-spielerwahl]"); if(w){ S.spielerTeam={...(S.spielerTeam||{}),[w.dataset.spielerwahl]:w.value}; zeichne(); document.getElementById("st-tors")?.scrollIntoView({block:"start"}); return; } const s=e.target.closest("[data-verlaufwahl]"); if(s){ S.verlaufTeam={...(S.verlaufTeam||{}),[s.dataset.verlaufwahl]:s.value}; zeichne(); } });
 
 // ------------------------------------------------------------- Ablauf
-// Wischen links/rechts wechselt die Kategorie
+// Wischen links/rechts wechselt die Kategorie – überall auf dem Bildschirm
 (function(){
-  let x0=null,y0=null,t0=0;
+  let x0=null,y0=null,x1=0,y1=0,box=null;
+  const scrollbox=el=>{ for(let n=el;n&&n!==document.body;n=n.parentElement){ if(n.scrollWidth>n.clientWidth+2){ const o=getComputedStyle(n).overflowX; if(o==="auto"||o==="scroll") return n; } } return null; };
   document.addEventListener("touchstart",e=>{
-    if(e.touches.length!==1||e.target.closest(".chips,.tabelle-wrap,.diagramm,svg,select,input,#blatt,.blatt")){x0=null;return;}
-    x0=e.touches[0].clientX;y0=e.touches[0].clientY;t0=Date.now();},{passive:true});
-  document.addEventListener("touchend",e=>{
-    if(x0==null) return; const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
-    if(Math.abs(dx)<60||Math.abs(dx)<1.6*Math.abs(dy)||Date.now()-t0>800) return;
+    if(e.touches.length!==1||document.querySelector("#blatt[open]")){x0=null;return;}
+    x0=x1=e.touches[0].clientX; y0=y1=e.touches[0].clientY; box=scrollbox(e.target);
+    if(box) box._sl=box.scrollLeft; },{passive:true});
+  document.addEventListener("touchmove",e=>{ if(x0!=null){x1=e.touches[0].clientX;y1=e.touches[0].clientY;} },{passive:true});
+  const ende=()=>{
+    if(x0==null) return; const dx=x1-x0, dy=y1-y0; x0=null;
+    if(Math.abs(dx)<40||Math.abs(dx)<1.2*Math.abs(dy)) return;
+    if(box){ const max=box.scrollWidth-box.clientWidth, sl=box._sl;   // erst die Leiste/Tabelle zu Ende scrollen
+      if(dx<0&&sl<max-2) return; if(dx>0&&sl>2) return; }
     const r=dx<0?1:-1;
     if(S.team){ const tabs=["spiele","tabelle","statistik","gegner"]; const i=tabs.indexOf(S.tab)+r; if(i<0||i>=tabs.length) return; S.tab=tabs[i]; }
     else { const k=["teams","alle","koersch","egelsee"]; const i=k.indexOf(S.start||"teams")+r; if(i<0||i>=k.length) return; S.start=k[i]; }
     zeichne(); scrollTo(0,0);
     const a=$("#app"); a.classList.remove("wisch-l","wisch-r"); void a.offsetWidth; a.classList.add(r>0?"wisch-l":"wisch-r");
-  },{passive:true});
+  };
+  document.addEventListener("touchend",ende,{passive:true});
+  document.addEventListener("touchcancel",ende,{passive:true});
 })();
 function zeichne(){ document.documentElement.style.setProperty("--kopfhoehe",document.querySelector("header").offsetHeight+"px"); $("#app").innerHTML=S.team?seiteTeam():seiteUebersicht(); }
 function oeffneTeam(slug,id){ S.team={slug,id}; S.tab="spiele"; S.umfang="team"; zeichne(); scrollTo(0,0);
