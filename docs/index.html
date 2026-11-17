@@ -52,6 +52,7 @@ h2:first-child{margin-top:4px}
   border-top:1px solid var(--linie);cursor:pointer}
 .spiel:first-child{border-top:0}
 .spiel .h{text-align:right}.spiel .g{text-align:left}
+a.ticker{color:var(--akzent);font-weight:700;text-decoration:none;white-space:nowrap}
 .spiel .lang{font-size:13.5px}
 .spiel .h,.spiel .g{overflow-wrap:break-word;hyphens:manual;line-height:1.25}
 .spiel .mein{font-weight:800}
@@ -202,6 +203,19 @@ function form(liga,id,n=5){ return teamSpiele(liga,id).map(s=>ausgang(s,id)).fil
 function formHtml(f){ return `<span class="form">${f.map(x=>`<i class="${x}">${x}</i>`).join("")}</span>`; }
 function teamName(liga,id){ const t=liga.teams.find(t=>String(t.id)===String(id)); return t?t.name:String(id); }
 
+// Liveticker: handball.net-Spiele direkt öffnen, sonst Spielplan beim Verband
+const HBNET_MATCH={"jblh-sued":[392173,5],"jblh-b-vr8":[392425,3],"3liga-sued":[414824,8]};
+function tickerUrl(l,sp){
+  const m=HBNET_MATCH[l.meta.slug], r=String(sp.id).match(/(\d{2})(\d{2})$/);
+  if(m&&r) return `https://www.handball.net/match/${m[0]+(+r[1]-1)*m[1]+(+r[2]-1)}?season_id=2627`;
+  return sp.link||l.meta.link;
+}
+function spielHeute(sp){ const d=datum(sp.datum), j=new Date(); return d&&d.toDateString()===j.toDateString(); }
+function tickerLink(l,sp){
+  if(!(sp.status==="live"||(spielHeute(sp)&&sp.status!=="beendet"))) return "";
+  const hb=!!HBNET_MATCH[l.meta.slug];
+  return ` · <a class="ticker" href="${esc(tickerUrl(l,sp))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${hb?"Liveticker":"Beim Verband"} ↗</a>`;
+}
 const umbruch = t => /^HSG Dutenhofen\/Münchholzhausen$/i.test(t)
   ? esc(t).replace(/^(HSG) (Dutenhofen\/)(Münchholz)(hausen)$/i,'<span style="white-space:nowrap">$1 $2</span><br>$3-<br>$4')
   : esc(t).replace(/\//g,"/<wbr>");
@@ -214,7 +228,7 @@ function spielZeile(liga, sp, sichtTeam, zusatz){
   const hm=meinTeam(liga,sp.heimId)?" mein":"", gm=meinTeam(liga,sp.gastId)?" mein":"";
   return `<div class="spiel" data-spiel="${esc(liga.meta.slug)}|${esc(sp.id)}">
     <div class="h${hm}${sp.heim.length>22?" lang":""}">${umbruch(sp.heim)}</div><div class="${kl}">${esc(erg)}</div><div class="g${gm}${sp.gast.length>22?" lang":""}">${umbruch(sp.gast)}</div>
-    <div class="meta">${zusatz?esc(zusatz)+" · ":""}${esc(tagText(sp.datum))}${sp.hz?" · HZ "+esc(sp.hz):""}${sp.halle?" · "+esc(sp.halle):""}</div></div>`;
+    <div class="meta">${zusatz?esc(zusatz)+" · ":""}${esc(tagText(sp.datum))}${tickerLink(liga,sp)}${sp.hz?" · HZ "+esc(sp.hz):""}${sp.halle?" · "+esc(sp.halle):""}</div></div>`;
 }
 
 // ------------------------------------------------------------- Seiten
@@ -393,7 +407,8 @@ function spielBlatt(slug,id){
       <div data-team="${esc(slug)}|${esc(s.heimId)}" style="cursor:pointer"><div class="mini">${esc(s.heim)}</div><b>${zh.platz}. Platz · ${pkt(zh)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.heimId))}</div></div>
       <div data-team="${esc(slug)}|${esc(s.gastId)}" style="cursor:pointer"><div class="mini">${esc(s.gast)}</div><b>${zg.platz}. Platz · ${pkt(zg)} Pkt</b><div style="margin-top:4px">${formHtml(form(l,s.gastId))}</div></div></div></div>`:""}
     ${vergleich.length?`<h2>Direkter Vergleich</h2><div class="karte">${vergleich.map(x=>spielZeile(l,x)).join("")}</div>`:""}
-    ${s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
+    ${HBNET_MATCH[l.meta.slug]?`<div class="hinweis"><a href="${esc(tickerUrl(l,s))}" target="_blank" rel="noopener">${s.status==="beendet"?"Spielbericht & Liveticker auf handball.net":"Liveticker auf handball.net"} ↗</a></div>`
+      :s.link?`<div class="hinweis"><a href="${esc(s.link)}" target="_blank" rel="noopener">Spiel auf der Verbandsseite ↗</a></div>`:""}`;
   blatt.showModal();
 }
 
@@ -713,6 +728,13 @@ async function lade(){
     $("#stand").textContent="keine Daten";
   }
 }
+// Während Spiele laufen (oder heute anstehen): alle 2 Minuten frische Daten holen
+setInterval(()=>{
+  if(window.EINGEBETTET||document.hidden||!S.ligen) return;
+  const jetzt=Date.now();
+  const aktiv=S.ligen.some(l=>l.spiele.some(sp=>sp.status==="live"||(sp.status!=="beendet"&&spielHeute(sp)&&Math.abs(jetzt-datum(sp.datum))<3*3600e3)));
+  if(aktiv){ const y=scrollY; lade().then(()=>scrollTo(0,y)); }
+},120000);
 if ("serviceWorker" in navigator && !window.EINGEBETTET && location.protocol==="https:") {
   const hatteSW=!!navigator.serviceWorker.controller; let neu=false;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(hatteSW&&!neu){ neu=true; location.reload(); } });   // neue Version sofort anzeigen

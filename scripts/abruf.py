@@ -24,7 +24,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 WURZEL = Path(__file__).resolve().parent.parent
@@ -554,6 +555,17 @@ def liga_h4a(cfg: dict) -> dict:
             status = "abgesetzt" if bemerkung else "geplant"   # Bemerkung ohne Ergebnis = Ausfall/Wertung
         if (g.get("gToken") or "").strip() and status != "beendet":
             status = "live"
+        # Läuft das Spiel gerade (Anpfiff bis ca. 110 Min. danach) und gibt es noch keinen Bericht,
+        # ist ein Ergebnis nur ein Zwischenstand.
+        try:
+            anpfiff = datetime.strptime(zeit, "%Y-%m-%dT%H:%M").replace(tzinfo=ZoneInfo("Europe/Berlin"))
+            jetzt_ = datetime.now(ZoneInfo("Europe/Berlin"))
+            kein_bericht = str(g.get("sGID") or "").strip() in ("", "0")
+            if z and anpfiff <= jetzt_ <= anpfiff + timedelta(minutes=110) and kein_bericht:
+                status = "live"
+                hg, ag = tore(g.get("gHomeGoals")), tore(g.get("gGuestGoals"))
+        except ValueError:
+            pass
         spiele.append({
             "id": g.get("gID"), "datum": zeit, "runde": None,
             "heim": heim, "heimId": heim, "gast": gast, "gastId": gast,
@@ -798,6 +810,7 @@ def main() -> int:
     jetzt = datetime.now(timezone.utc).isoformat(timespec="seconds")
     index = {"aktualisiert": jetzt, "saison": cfg.get("saison"), "ligen": []}
     fehler = 0
+    geaendert = False
 
     for liga in cfg["ligen"]:
         print(f"→ {liga['kurz']} ({liga['quelle']})")
@@ -831,13 +844,28 @@ def main() -> int:
         meta["aktualisiert"] = jetzt
         meta["abrufFehler"] = not daten["spiele"]
         meta["tabelleQuelle"] = tabelle_quelle
-        (AUSGABE / f"{liga['slug']}.json").write_text(
-            json.dumps({"meta": meta, **daten}, ensure_ascii=False, separators=(",", ":")),
-            encoding="utf-8")
+        ziel = AUSGABE / f"{liga['slug']}.json"
+        try:                                          # nichts geändert → alten Zeitstempel behalten (kein Commit)
+            alt = json.loads(ziel.read_text(encoding="utf-8"))
+            if {**alt, "meta": {**alt["meta"], "aktualisiert": jetzt}} == json.loads(json.dumps({"meta": meta, **daten})):
+                meta["aktualisiert"] = alt["meta"]["aktualisiert"]
+            else:
+                geaendert = True
+        except (OSError, ValueError, KeyError):
+            geaendert = True
+        ziel.write_text(json.dumps({"meta": meta, **daten}, ensure_ascii=False, separators=(",", ":")),
+                        encoding="utf-8")
         index["ligen"].append(meta)
         print(f"  {len(daten['spiele'])} Spiele, {len(daten['tabelle'])} Tabellenplätze, "
               f"{len(daten['torschuetzen'])} Spieler")
 
+    if not geaendert:                                 # nur Zeitstempel wären neu → Index unverändert lassen
+        try:
+            index["aktualisiert"] = json.loads((AUSGABE / "index.json").read_text(encoding="utf-8"))["aktualisiert"]
+        except (OSError, ValueError, KeyError):
+            pass
+    else:
+        index["aktualisiert"] = jetzt
     (AUSGABE / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     CACHE.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

@@ -2,8 +2,8 @@ name: Daten abrufen
 
 on:
   schedule:
-    # Wochenende (Spieltage) stündlich 9–23 Uhr, unter der Woche zweimal täglich (UTC-Zeiten)
-    - cron: "17 8-22 * * 6,0"
+    # Wochenende (Spieltage) alle 10 Minuten 9–23 Uhr für Zwischenstände, unter der Woche zweimal täglich (UTC-Zeiten)
+    - cron: "*/10 8-21 * * 6,0"
     - cron: "17 6,18 * * 1-5"
   workflow_dispatch: {}        # "Run workflow"-Knopf zum manuellen Starten
   push:                        # neue Liga eingetragen → sofort abrufen
