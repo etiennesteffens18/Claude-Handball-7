@@ -189,6 +189,13 @@ svg.verlauf{width:100%;height:auto;display:block;touch-action:pan-y}
 .ts-liste{gap:14px}
 .ts-liste>div{min-width:0}
 ul.scout{margin:0;padding-left:18px}ul.scout li{margin:4px 0}
+ul.fazit{list-style:none;margin:0;padding:0}ul.fazit li{display:flex;gap:8px;margin:7px 0;line-height:1.35}
+ul.fazit .mk{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;margin-top:1px}
+ul.fazit li.plus .mk{background:#2f9e44}ul.fazit li.minus .mk{background:#e8590c}
+ul.fazit li.minus.stark .mk{background:#c92a2a}ul.fazit li.plus.stark{background:rgba(47,158,68,.12)}ul.fazit li.minus.stark{background:var(--akzent-weich)}ul.fazit li.stark{border-radius:8px;padding:5px 6px;margin-left:-6px;margin-right:-6px}
+ul.fazit em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#c92a2a;white-space:nowrap}ul.fazit li.plus em{color:#2f9e44}
+.fazit-kopf{font-size:15px}.fazit-form{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fokus{margin-top:10px;padding:8px 10px;border-left:3px solid #c92a2a;background:var(--akzent-weich);border-radius:6px;font-size:14px}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
 </head>
@@ -427,7 +434,7 @@ function seiteStatistik(){
     const viel=[...fertig].sort((a,b)=>(b.hTore+b.gTore)-(a.hTore+a.gTore))[0];
     html+=`<h2 id="st-rek" data-nav="Rekorde">Rekorde</h2><div class="karte"><div class="mini">Höchster Sieg</div>${spielZeile(l,hoch)}<div class="mini" style="margin-top:10px">Torreichstes Spiel</div>${spielZeile(l,viel)}</div>`+rekordListen(l);
   }
-  html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l)+abschnittZahl(l);
+  html+=abschnittSchnitt(l)+abschnittVerlauf(l)+abschnittAuszeit(l)+abschnittZahl(l)+abschnittZusammenfassung(l);
   const nav=[...html.matchAll(/<h2 id="(st-[a-z]+)" data-nav="([^"]+)"/g)].map(m=>`<button class="chip" data-springe="${m[1]}">${m[2]}</button>`).join("");
   return `<div class="chips sprung">${nav}</div>`+html;
 }
@@ -611,6 +618,81 @@ function abschnittZahl(l){
 }
 
 // ------------------------------------------------------------- Gegner-Scouting
+function abschnittZusammenfassung(l){
+  if(!S.team||S.team.slug!==l.meta.slug) return "";
+  const id=String(S.team.id), name=teamName(l,id), nurEigene=!!l.meta.berichteNur;
+  const K=kennzahlen(l,id); if(!K.w.sp) return "";
+  const alle=l.tabelle.map(t=>String(t.teamId));
+  // Metrik bewerten: Wert des Teams gegen alle anderen Teams der Liga
+  const bewerte=(get,hoch,bericht)=>{
+    const vals=alle.map(t=>({t,v:get(kennzahlen(l,t))})).filter(x=>x.v!=null&&isFinite(x.v));
+    const me=vals.find(x=>x.t===id); if(!me||vals.length<4) return null;
+    const m=vals.reduce((a,x)=>a+x.v,0)/vals.length, sd=Math.sqrt(vals.reduce((a,x)=>a+(x.v-m)**2,0)/vals.length)||1;
+    const z=(hoch?1:-1)*(me.v-m)/sd;
+    const rang=1+vals.filter(x=>hoch?x.v>me.v:x.v<me.v).length;
+    return {v:me.v,m,z,rang,n:vals.length,mitRang:!(bericht&&nurEigene)};
+  };
+  const pro=(a,b)=>b?a/b:null;
+  const M=[
+    ["Angriff",      "Tore je Spiel",            k=>k.w.sp?k.w.tore/k.w.sp:null, true,false, f1],
+    ["Abwehr",       "Gegentore je Spiel",       k=>k.w.sp?k.w.gegen/k.w.sp:null,false,false,f1],
+    ["Disziplin",    "Zeitstrafen je Spiel",     k=>k.st&&k.st.spiele?k.st.zwei/k.st.spiele:null,false,true,f1],
+    ["Überzahl",     "Tordiff. je 2 Min. Überzahl", k=>k.z?zahlWerte(k.z,"ue").d:null,true,true,plus],
+    ["Unterzahl",    "Tordiff. je 2 Min. Unterzahl",k=>k.z?zahlWerte(k.z,"uz").d:null,true,true,plus],
+    ["7m",           "7m-Quote",                 k=>k.s7&&k.s7.w>=5?k.s7.t/k.s7.w:null,true,true,pz],
+    ["Auszeit",      "nächstes Tor nach eigener Auszeit", k=>k.a&&(k.a.naechstesEigen+k.a.naechstesGegner)>=4?k.a.naechstesEigen/(k.a.naechstesEigen+k.a.naechstesGegner):null,true,true,pz],
+  ];
+  const gut=[], bau=[];
+  const rangTxt=r=>r.mitRang?` – Platz ${r.rang} von ${r.n}`:"";
+  for(const [titel,txt,get,hoch,bericht,fmt] of M){
+    const r=bewerte(get,hoch,bericht); if(!r) continue;
+    const top=r.mitRang?(r.rang<=3&&r.z>0.3):r.z>=0.8, flop=r.mitRang?(r.rang>r.n-3&&r.z<-0.3):r.z<=-0.8;
+    const eintrag={z:Math.abs(r.z),html:`<b>${titel}:</b> ${fmt(r.v)} ${txt} (Liga ${fmt(r.m)})${rangTxt(r)}`};
+    if(top) gut.push(eintrag); else if(flop) bau.push(eintrag);
+  }
+  // Spielphasen gegen den Liga-Schnitt
+  const v=l.verlauf, vt=v?.teams?.find(x=>String(x.teamId)===id);
+  if(vt&&vt.spiele>=2){
+    const d=vt.tore.map((x,i)=>x/vt.spiele-v.ligaSchnitt[i]), g=vt.gegen.map((x,i)=>x/vt.spiele-v.ligaSchnitt[i]);
+    const net=d.map((x,i)=>x-g[i]);
+    const ib=net.indexOf(Math.max(...net)), iw=net.indexOf(Math.min(...net));
+    if(net[ib]>=0.5) gut.push({z:net[ib],html:`<b>Stärkste Phase:</b> ${esc(v.labels[ib])} Min. (${plus(net[ib])} Tore je Spiel besser als der Schnitt)`});
+    if(net[iw]<=-0.5) bau.push({z:-net[iw],html:`<b>Schwächste Phase:</b> ${esc(v.labels[iw])} Min. (${plus(net[iw])} Tore je Spiel schlechter als der Schnitt)`});
+    const h=Math.floor(net.length/2), h1=net.slice(0,h).reduce((a,x)=>a+x,0), h2=net.slice(h).reduce((a,x)=>a+x,0);
+    if(h1-h2>=1.5) bau.push({z:(h1-h2)/1.5,html:`<b>2. Halbzeit:</b> fällt ab – relativ zum Schnitt ${plus(h2-h1)} Tore je Spiel gegenüber der 1. Halbzeit (Kraft/Wechsel?)`});
+    else if(h2-h1>=1.5) gut.push({z:(h2-h1)/1.5,html:`<b>2. Halbzeit:</b> legt zu – ${plus(h2-h1)} Tore je Spiel besser als in der 1. Halbzeit`});
+    if(g[0]>=0.8) bau.push({z:g[0],html:`<b>Start:</b> kassiert in den ersten ${esc(v.labels[0])} Min. ${plus(g[0])} Tore mehr als der Schnitt – Anfangsphase verschlafen`});
+  }
+  // knappe Spiele, Heim/Auswärts, Abhängigkeit vom besten Werfer
+  const fertig=teamSpiele(l,id).filter(s=>s.status==="beendet"&&s.hTore!=null);
+  const knapp=fertig.filter(s=>Math.abs(s.hTore-s.gTore)<=2).map(s=>ausgang(s,id));
+  if(knapp.length>=2){ const s=knapp.filter(x=>x==="S").length, n=knapp.filter(x=>x==="N").length, u=knapp.length-s-n;
+    const txt=`<b>Knappe Spiele</b> (≤ 2 Tore): ${s}-${u}-${n}`;
+    if(n>=2&&n>s) bau.push({z:1+n-s,html:txt+` – in der Schlussphase fehlt die Cleverness`}); else if(s>=2&&s>n) gut.push({z:1+s-n,html:txt+` – nervenstark in engen Spielen`}); }
+  const hp=K.w.heim[0]*2+K.w.heim[1], hs=K.w.heim.reduce((a,x)=>a+x,0), ap=K.w.ausw[0]*2+K.w.ausw[1], as=K.w.ausw.reduce((a,x)=>a+x,0);
+  if(hs>=2&&as>=2){ const qh=hp/(2*hs), qa=ap/(2*as);
+    if(qh-qa>=0.5) bau.push({z:(qh-qa)*3,kein:1,html:`<b>Auswärts:</b> nur ${ap}:${2*as-ap} Punkte (heim ${hp}:${2*hs-hp})`});
+    else if(qa-qh>=0.5) bau.push({z:(qa-qh)*3,kein:1,html:`<b>Heimspiele:</b> nur ${hp}:${2*hs-hp} Punkte (auswärts ${ap}:${2*as-ap})`}); }
+  const werfer=l.torschuetzen.filter(p=>String(p.teamId)===id&&p.tore>0);
+  if(werfer[0]&&K.w.tore){ const ant=werfer[0].tore/K.w.tore;
+    if(ant>=0.3) bau.push({z:ant*5,html:`<b>Abhängigkeit:</b> ${esc(werfer[0].name)} wirft ${pz(ant)} der Tore – weitere Schützen einbinden`});
+    const zw=werfer.filter(p=>p.tore/K.w.tore>=0.1).length; if(ant<0.25&&zw>=5) gut.push({z:1,html:`<b>Breite:</b> ${zw} Spieler mit mindestens 10 % der Tore – schwer auszurechnen`}); }
+  // Zusammenfassung oben
+  const t=K.t, f=form(l,id), fs=f.filter(x=>x==="S").length, fn=f.filter(x=>x==="N").length;
+  const trend=f.length>=3?(fs>=4?"starker Lauf":fn>=4?"Negativlauf":fs>fn?"Form eher positiv":fn>fs?"Form eher negativ":"Form durchwachsen"):"";
+  const sortiert=a=>a.sort((x,y)=>y.z-x.z);
+  const li=(e,art)=>`<li class="${art}${e.z>=1.4?" stark":""}"><span class="mk">${art==="plus"?"✓":"!"}</span><span>${e.html}${e.z>=1.4?` <em>${art==="plus"?"herausragend":"sehr auffällig"}</em>`:""}</span></li>`;
+  const g2=sortiert(gut), b2=sortiert(bau);
+  const fb=b2.find(e=>!e.kein);
+  const fokus=fb?`<div class="fokus"><b>Thema fürs Training:</b> ${fb.html.replace(/<b>([^<]+):<\/b>/,"$1 –")}</div>`:"";
+  return `<h2 id="st-fazit" data-nav="Zusammenfassung">Zusammenfassung ${esc(name)}</h2>
+    <div class="karte"><div class="fazit-kopf">${t?`<b>${t.platz}. Platz</b> · ${pkt(t)} Punkte · `:""}${K.w.sp} Spiele, Tore ${K.w.tore}:${K.w.gegen} (${plus((K.w.tore-K.w.gegen)/K.w.sp)} je Spiel)</div>
+      ${f.length?`<div class="fazit-form">Letzte Spiele ${formHtml(f)} <span class="liga-name">${trend}</span></div>`:""}${fokus}</div>
+    ${g2.length?`<div class="karte"><div class="diag-titel">Stärken</div><ul class="fazit">${g2.map(e=>li(e,"plus")).join("")}</ul></div>`:""}
+    ${b2.length?`<div class="karte"><div class="diag-titel">Darauf eingehen</div><ul class="fazit">${b2.map(e=>li(e,"minus")).join("")}</ul></div>`:""}
+    ${!g2.length&&!b2.length?`<div class="karte leer">Keine besonderen Auffälligkeiten – überall nahe am Liga-Schnitt.</div>`:""}
+    <div class="hinweis">Automatisch erstellt: Vergleich mit allen Teams der Liga${nurEigene?" (Werte aus Spielberichten nur gegen den Liga-Schnitt, da nicht alle Berichte vorliegen)":""}. „Sehr auffällig" = deutlich vom Schnitt entfernt.</div>`;
+}
 function kennzahlen(l,id){
   const w=teamWerte(l,id), t=l.tabelle.find(x=>String(x.teamId)===String(id));
   const st=l.teamStrafen.find(x=>String(x.teamId)===String(id));
