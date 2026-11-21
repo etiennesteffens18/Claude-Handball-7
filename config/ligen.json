@@ -79,6 +79,19 @@
       "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161316"
     },
     {
+      "slug": "md-rl-bw",
+      "name": "Männliche D-Jugend BWHV",
+      "kurz": "U14 · BW",
+      "quelle": "h4a",
+      "org_id": 216,
+      "class_id": 161326,
+      "jugend": true,
+      "meine_teams": [
+        "JANO Filder"
+      ],
+      "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161326"
+    },
+    {
       "slug": "m-rl-bw",
       "name": "Männer-Regionalliga BW",
       "kurz": "Regionalliga BW",
