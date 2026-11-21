@@ -1,5 +1,5 @@
 {
- "aktualisiert": "2026-11-17T09:27:44+00:00",
+ "aktualisiert": "2026-11-21T11:45:41+00:00",
  "saison": "2026/27",
  "ligen": [
   {
@@ -89,6 +89,20 @@
     "JANO Filder"
    ],
    "aktualisiert": "2026-11-17T09:27:44+00:00",
+   "abrufFehler": false,
+   "tabelleQuelle": "verband"
+  },
+  {
+   "slug": "md-rl-bw",
+   "name": "Männliche D-Jugend BWHV",
+   "kurz": "U14 · BW",
+   "quelle": "h4a",
+   "jugend": true,
+   "link": "https://www.handball4all.de/home/portal/baden-wuerttembergischer-hv#/league?ogId=216&lId=161326",
+   "meineTeams": [
+    "JANO Filder"
+   ],
+   "aktualisiert": "2026-11-21T11:45:41+00:00",
    "abrufFehler": false,
    "tabelleQuelle": "verband"
   },
