@@ -195,6 +195,11 @@ ul.fazit li.plus .mk{background:#2f9e44}ul.fazit li.minus .mk{background:#e8590c
 ul.fazit li.minus.stark .mk{background:#c92a2a}ul.fazit li.plus.stark{background:rgba(47,158,68,.12)}ul.fazit li.minus.stark{background:var(--akzent-weich)}ul.fazit li.stark{border-radius:8px;padding:5px 6px;margin-left:-6px;margin-right:-6px}
 ul.fazit em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#c92a2a;white-space:nowrap}ul.fazit li.plus em{color:#2f9e44}
 .fazit-kopf{font-size:15px}.fazit-form{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.az-z{display:grid;grid-template-columns:34px 1fr auto 38px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--linie);font-size:14px}
+.az-kopf{font-size:11px;color:var(--leise);text-transform:uppercase;letter-spacing:.03em;border-top:0;padding-top:10px}
+.az-min{font-variant-numeric:tabular-nums;color:var(--leise)}.az-team{display:flex;align-items:center;gap:6px;min-width:0}.az-stand{display:block;font-size:12px;color:var(--leise)}.az-team i{flex:none;width:8px;height:8px;border-radius:50%}
+.az-erg{font-weight:700;white-space:nowrap}.az-erg.gut{color:#2f9e44}.az-erg.schlecht{color:#c92a2a}.az-drei{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.zz{display:grid;grid-template-columns:1fr auto;column-gap:6px;padding:5px 0;border-top:1px solid var(--linie);font-size:14px}.zz b{text-align:right;font-variant-numeric:tabular-nums}.zz .leise{grid-column:1/-1;font-size:12px;margin-top:-2px}
 .fokus{margin-top:10px;padding:8px 10px;border-left:3px solid #c92a2a;background:var(--akzent-weich);border-radius:6px;font-size:14px}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
 </style>
@@ -528,7 +533,44 @@ function spielverlaufHtml(l,s,v){
     ${svg}<div class="vl-info" id="vl-info">Halbzeit ${hzStand[0]}:${hzStand[1]} · Endstand ${s.hTore!=null?`${s.hTore}:${s.gTore}`:`${h}:${g}`}</div>
     ${s.hTore!=null&&(s.hTore!==h||s.gTore!==g)?`<div class="hinweis" style="text-align:center;margin:-4px 0 8px">Im Online-Bericht fehlen einzelne Tore (Verlauf zählt ${h}:${g}).</div>`:""}
     <div class="kz vl-kz"><div><b>+${maxH}</b><span>höchste Führung ${esc(teamName(l,s.heimId))}</span></div><div><b>+${maxG}</b><span>höchste Führung ${esc(teamName(l,s.gastId))}</span></div><div><b>${wechsel}</b><span>Führungs&shy;wechsel</span></div></div>
-    <div class="hinweis" style="margin:4px 0 0">Über der Mittellinie = ${esc(s.heim)} vorn, darunter = ${esc(s.gast)} vorn. A = Auszeit, grau = 2 Min., rot = Disqualifikation (oben Heim, unten Gast). Finger über das Diagramm ziehen zeigt den Spielstand.</div></div>`+tsHtml;
+    <div class="hinweis" style="margin:4px 0 0">Über der Mittellinie = ${esc(s.heim)} vorn, darunter = ${esc(s.gast)} vorn. A = Auszeit, grau = 2 Min., rot = Disqualifikation (oben Heim, unten Gast). Finger über das Diagramm ziehen zeigt den Spielstand.</div></div>`+spielZusatz(s,ev)+tsHtml;
+}
+function spielZusatz(s,ev){
+  const tore=ev.filter(e=>e.c==="T"||e.c==="7"), geg={H:"G",G:"H"}, nm={H:s.heim,G:s.gast};
+  const mmss=t=>`${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`, minute=t=>Math.min(Math.floor(t/60)+1,60)+"'";
+  // Auszeiten
+  const az=ev.filter(e=>e.c==="A").map(a=>{
+    let h=0,g=0; for(const e of tore){ if(e.t>a.t) break; e.si==="H"?h++:g++; }
+    const nach=tore.filter(e=>e.t>=a.t), n=nach[0], drei=nach.filter(e=>e.t-a.t<=180);
+    const eig=drei.filter(e=>e.si===a.si).length, geg3=drei.length-eig;
+    return {a,stand:a.si==="H"?`${h}:${g}`:`${g}:${h}`,ok:n?n.si===a.si:null,eig,geg3};});
+  let azHtml="";
+  if(az.length){
+    const zeile=x=>`<div class="az-z"><span class="az-min">${minute(x.a.t)}</span><span class="az-team"><i style="background:${x.a.si==="H"?"var(--s-team)":"var(--s-liga)"}"></i><span>${esc(nm[x.a.si])}<small class="az-stand">Stand ${x.stand}</small></span></span><span class="az-erg ${x.ok==null?"":x.ok?"gut":"schlecht"}">${x.ok==null?"–":x.ok?"✓ Tor":"✗ Gegentor"}</span><span class="az-drei">${x.eig}:${x.geg3}</span></div>`;
+    const sum=si=>{const l=az.filter(x=>x.a.si===si); if(!l.length) return ""; const ok=l.filter(x=>x.ok).length;
+      return `<div><b>${ok}/${l.length}</b><span>${esc(nm[si])}: nächstes Tor nach eigener Auszeit</span></div>`;};
+    azHtml=`<h2>Auszeiten</h2><div class="karte"><div class="kz vl-kz">${sum("H")}${sum("G")}</div>
+      <div class="az-z az-kopf"><span>Min.</span><span>Auszeit von</span><span>nächstes Tor</span><span>3 Min.</span></div>${az.map(zeile).join("")}
+      <div class="hinweis" style="margin:6px 0 0">Stand aus Sicht des Teams mit der Auszeit. „3 Min.“ = seine Tore:Gegentore in den drei Minuten danach.</div></div>`;
+  }
+  // Über-/Unterzahl
+  const st={H:[],G:[]}, zz=new Set(ev.filter(e=>e.c==="Z").map(e=>e.si+e.t));
+  for(const e of ev) if(e.c==="Z"||(e.c==="R"&&!zz.has(e.si+e.t))) st[e.si].push(e.t);
+  let zHtml="";
+  if(st.H.length||st.G.length){
+    const akt=(si,t)=>st[si].filter(a=>a<t&&t<=a+120).length, ende=Math.max(3600,...ev.map(e=>e.t));
+    const r={H:{ue:0,uz:0,ueT:0,ueG:0,uzT:0,uzG:0},G:{ue:0,uz:0,ueT:0,ueG:0,uzT:0,uzG:0}};
+    for(let t=1;t<=ende;t++){ const d=akt("G",t)-akt("H",t); if(d>0){r.H.ue++;r.G.uz++;} else if(d<0){r.H.uz++;r.G.ue++;} }
+    for(const e of tore){ const o=geg[e.si], d=akt(o,e.t)-akt(e.si,e.t);
+      if(d>0){r[e.si].ueT++;r[o].uzG++;} else if(d<0){r[e.si].uzT++;r[o].ueG++;} }
+    const spalte=si=>{const x=r[si]; return `<div><div class="mini">${esc(nm[si])}</div>
+      <div class="zz"><span>Überzahl</span><b>${x.ue?`${x.ueT}:${x.ueG}`:"–"}</b><span class="leise">${x.ue?mmss(x.ue)+" Min.":""}</span></div>
+      <div class="zz"><span>Unterzahl</span><b>${x.uz?`${x.uzT}:${x.uzG}`:"–"}</b><span class="leise">${x.uz?mmss(x.uz)+" Min.":""}</span></div>
+      <div class="zz"><span>Zeitstrafen</span><b>${st[si].length}</b><span></span></div></div>`;};
+    zHtml=`<h2>Über-/Unterzahl</h2><div class="karte"><div class="zwei">${spalte("H")}${spalte("G")}</div>
+      <div class="hinweis" style="margin:6px 0 0">Tore:Gegentore, während beim Gegner mehr (Überzahl) bzw. beim eigenen Team mehr (Unterzahl) Zeitstrafen liefen. Disqualifikationen zählen als 2 Min.</div></div>`;
+  }
+  return azHtml+zHtml;
 }
 function vlZeigen(e){
   const svg=e.target.closest&&e.target.closest("svg.verlauf"); if(!svg||!window._vl) return;
