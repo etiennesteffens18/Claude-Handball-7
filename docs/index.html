@@ -199,6 +199,7 @@ ul.fazit em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppe
 .az-kopf{font-size:11px;color:var(--leise);text-transform:uppercase;letter-spacing:.03em;border-top:0;padding-top:10px}
 .az-min{font-variant-numeric:tabular-nums;color:var(--leise)}.az-team{display:flex;align-items:center;gap:6px;min-width:0}.az-stand{display:block;font-size:12px;color:var(--leise)}.az-team i{flex:none;width:8px;height:8px;border-radius:50%}
 .az-erg{font-weight:700;white-space:nowrap}.az-erg.gut{color:#2f9e44}.az-erg.schlecht{color:#c92a2a}.az-drei{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.zz2{display:grid;grid-template-columns:1fr 44px 34px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--linie);font-size:14px}.zz2 b,.zz-d{text-align:right;font-variant-numeric:tabular-nums}.zz-d{font-weight:700}.zz2.az-kopf{border-top:0}.zz-d.gut{color:#2f9e44}.zz-d.schlecht{color:#c92a2a}
 .zz{display:grid;grid-template-columns:1fr auto;column-gap:6px;padding:5px 0;border-top:1px solid var(--linie);font-size:14px}.zz b{text-align:right;font-variant-numeric:tabular-nums}.zz .leise{grid-column:1/-1;font-size:12px;margin-top:-2px}
 .fokus{margin-top:10px;padding:8px 10px;border-left:3px solid #c92a2a;background:var(--akzent-weich);border-radius:6px;font-size:14px}
 table.vgl{width:100%}table.vgl td:first-child,table.vgl th:first-child{text-align:left;white-space:normal;font-family:inherit;color:var(--leise);font-size:13px}table.vgl td:not(:first-child),table.vgl th:not(:first-child){text-align:center;font-family:var(--mono)}
@@ -563,12 +564,12 @@ function spielZusatz(s,ev){
     for(let t=1;t<=ende;t++){ const d=akt("G",t)-akt("H",t); if(d>0){r.H.ue++;r.G.uz++;} else if(d<0){r.H.uz++;r.G.ue++;} }
     for(const e of tore){ const o=geg[e.si], d=akt(o,e.t)-akt(e.si,e.t);
       if(d>0){r[e.si].ueT++;r[o].uzG++;} else if(d<0){r[e.si].uzT++;r[o].ueG++;} }
-    const spalte=si=>{const x=r[si]; return `<div><div class="mini">${esc(nm[si])}</div>
-      <div class="zz"><span>Überzahl</span><b>${x.ue?`${x.ueT}:${x.ueG}`:"–"}</b><span class="leise">${x.ue?mmss(x.ue)+" Min.":""}</span></div>
-      <div class="zz"><span>Unterzahl</span><b>${x.uz?`${x.uzT}:${x.uzG}`:"–"}</b><span class="leise">${x.uz?mmss(x.uz)+" Min.":""}</span></div>
-      <div class="zz"><span>Zeitstrafen</span><b>${st[si].length}</b><span></span></div></div>`;};
-    zHtml=`<h2>Über-/Unterzahl</h2><div class="karte"><div class="zwei">${spalte("H")}${spalte("G")}</div>
-      <div class="hinweis" style="margin:6px 0 0">Tore:Gegentore, während beim Gegner mehr (Überzahl) bzw. beim eigenen Team mehr (Unterzahl) Zeitstrafen liefen. Disqualifikationen zählen als 2 Min.</div></div>`;
+    const zeile=si=>{const x=r[si], d=x.ueT-x.ueG;
+      return `<div class="zz2"><span class="az-team"><i style="background:${si==="H"?"var(--s-team)":"var(--s-liga)"}"></i><span>${esc(nm[si])} in Überzahl<small class="az-stand">${x.ue?mmss(x.ue)+" Min.":"nie"}</small></span></span><b>${x.ue?`${x.ueT}:${x.ueG}`:"–"}</b><span class="zz-d ${!x.ue||!d?"":d>0?"gut":"schlecht"}">${x.ue?(d>0?"+":"")+d:""}</span></div>`;};
+    zHtml=`<h2>Über-/Unterzahl</h2><div class="karte">
+      <div class="zz2 az-kopf"><span>Phase</span><span>Tore</span><span>Diff.</span></div>${zeile("H")}${zeile("G")}
+      <div class="zz2"><span>Zeitstrafen</span><b>${st.H.length}:${st.G.length}</b><span></span></div>
+      <div class="hinweis" style="margin:6px 0 0">Tore:Gegentore aus Sicht des Teams in Überzahl – die Unterzahl des Gegners ist dieselbe Phase. Disqualifikationen zählen als 2 Min.</div></div>`;
   }
   return azHtml+zHtml;
 }
